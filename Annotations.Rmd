@@ -1,0 +1,54 @@
+---
+title: "Annotations"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Using an of annotation packge
+
+```{r}
+# Import packages
+library(AnnotationDbi)
+library(org.Hs.eg.db) # or, e.g. Homo.sapiens
+
+# Check package spec
+org.Hs.eg.db
+```
+
+
+```{r}
+# View columns' names
+columns(org.Hs.eg.db)
+
+# View the first 10 keys (i.e., values) in a specific column(i.e., keytype)
+keys(org.Hs.eg.db, keytype = "ENSEMBL")[1:10]
+
+# Map the ID from a specific key (e.g., ENSG00000175899) from its corresponding keytype (e.g., ENSEMBL) to another keytype (e.g., ENTREZID)
+mapIds(org.Hs.eg.db,
+       keys = "ENSG00000175899",
+       column = "ENTREZID",
+       keytype = "ENSEMBL")
+```
+
+```{r}
+# A process similar to the mapIds function from the AnnotationDbi package, this time in the biomaRt package
+library(biomaRt)
+mart <-
+  useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+getBM(
+  mart = mart,
+  attributes = "entrezgene_id",
+  filters = "ensembl_gene_id",
+  values = "ENSG00000175899"
+)
+```
+
+```{r}
+# List the first 5 attributes for a specific mart object
+listAttributes(mart)[1:5,]
+
+# List the first 5 filters for a specific mart object
+listFilters(mart)[1:5,]
+```
+
