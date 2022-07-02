@@ -1,0 +1,156 @@
+---
+title: "Inference"
+output:
+  html_document:
+    df_print: paged
+---
+# t-test
+
+```{r}
+# Import packages and the previous data for individuals
+suppressMessages(library(Biobase))
+suppressMessages(library(maPooling))
+data(maPooling)
+pd = pData(maPooling)
+individuals = which(rowSums(pd) == 1)
+individuals = individuals[-grep("tr", names(individuals))]
+ind_y = exprs(maPooling)[, individuals]
+ind_g = factor(as.numeric(grepl("b", names(individuals))))
+```
+
+```{r}
+# t-test
+suppressMessages(library(genefilter))
+ind_tt = rowttests(ind_y, ind_g)
+
+# How many are sig at p < 0.01
+sum(ind_tt$p.value < 0.01)
+```
+
+<br>
+<br>
+
+# Multiple comparisons
+
+```{r}
+# Address the issue using the q-value
+suppressMessages(library(qvalue))
+qvals = qvalue(ind_tt$p.value)$qvalue
+sum(qvals < 0.01)
+```
+
+<br>
+<br>
+
+# The limma hierarchical model
+
+#### Simple t-tests
+
+```{r}
+# Import data
+suppressMessages(library(SpikeInSubset))
+data(rma95)
+```
+
+```{r}
+# Check pheno data for the first 5 mRNAs
+pData(rma95)[, 1:5]
+
+# Check seq data for five mRNAs
+exprs(rma95)[655:659, ]
+```
+
+```{r}
+# Simple t-tests
+suppressMessages(library(genefilter))
+fac <- factor(rep(1:2, each = 3))
+rtt <- rowttests(exprs(rma95), fac)
+```
+
+```{r}
+# Define colors depending on whether the p-value is small, the absolute difference in means is large, and whether the feature is a spike-in value
+mask <- with(rtt, abs(dm) < 0.2 & p.value < 0.01)
+mask[140:160]
+spike <- rownames(rma95) %in% colnames(pData(rma95))
+spike[20:40]
+
+# The spike-in genes are in blue, while the red points indicate genes which have small p-values but also small differences in means.
+cols <- ifelse(mask, "red", ifelse(spike, "dodgerblue", "black"))
+cols[20:30]
+
+# Plot p-values against DM
+with(
+  rtt,
+  plot(
+    -dm,
+    -log10(p.value),
+    cex = .8,
+    pch = 16,
+    xlim = c(-1, 1),
+    ylim = c(0, 5),
+    xlab = "difference in means",
+    col = cols
+  )
+)
+abline(h = 2, v = c(-.2, .2), lty = 2)
+
+# Plot p-values against SD
+rtt$s <-
+  apply(exprs(rma95), 1, function(row)
+    sqrt(.5 * (var(row[1:3]) + var(row[4:6]))))
+with(
+  rtt,
+  plot(
+    s,
+    -log10(p.value),
+    cex = .8,
+    pch = 16,
+    log = "x",
+    xlab = "estimate of standard deviation",
+    col = cols
+  )
+)
+```
+
+<br>
+
+#### limma steps
+
+```{r}
+suppressMessages(library(limma))
+
+# Step 1: least squares estimates
+fit <- lmFit(rma95, design = model.matrix( ~ fac))
+
+# Step 2: moderate the t statistics
+fit <- eBayes(fit)
+
+# Step 3: report
+topTable(fit, coef = 2)
+```
+
+**Note:** *topTable* will return the top genes ranked by whichever value you define.
+
+**Note:** The column *adj.P.Val* includes the adjusted p-values (using the method of Benjamini-Hochberg) for each gene.
+
+```{r}
+# Plot p-values against DM
+limmares <-
+  data.frame(dm = coef(fit)[, "fac2"], p.value = fit$p.value[, "fac2"])
+with(
+  limmares,
+  plot(
+    dm,
+    -log10(p.value),
+    cex = .8,
+    pch = 16,
+    col = cols,
+    xlab = "difference in means",
+    xlim = c(-1, 1),
+    ylim = c(0, 5)
+  )
+)
+abline(h = 2, v = c(-.2, .2), lty = 2)
+```
+
+Note that the red points are now all under the line where -log10(p.value) is equal to 2. Also, the blue points which represent real differences have p-values which are even higher than before.

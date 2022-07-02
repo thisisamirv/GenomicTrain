@@ -1,0 +1,157 @@
+---
+title: "Data managment"
+output:
+  html_document:
+    df_print: paged
+---
+# Coordinating information from diverse tables
+```{r}
+# Load sample data
+suppressMessages(library(GSE5859Subset))
+data(GSE5859Subset)
+```
+
+Upon attachment and loading of package data, we have three data elements:
+
+* geneAnnotation
+* geneExpression
+* sampleInfo
+
+```{r}
+# Check elements
+geneExpression[1:2, 1:5]
+geneAnnotation[1, ]
+sampleInfo[1, ]
+```
+
+```{r}
+# Integrate data
+cbind(sampleInfo[1:3, ], colnames(geneExpression)[1:3], t(geneExpression)[1:3, 1:4])
+```
+
+<br>
+<br>
+
+# ExpressionSet
+```{r}
+# Import packages
+suppressMessages(library(Biobase))
+```
+
+```{r}
+# Bind the previous tables in an ExpressionSet
+rownames(sampleInfo) = sampleInfo$filename
+rownames(geneAnnotation) = geneAnnotation$PROBEID
+es5859 = ExpressionSet(assayData = geneExpression)
+pData(es5859) = sampleInfo
+fData(es5859) = geneAnnotation
+```
+
+```{r}
+# Subsetting data from an ExpressionSet
+es5859_Y = es5859[which(fData(es5859)$CHR == "chrY"), ]
+```
+
+<br>
+
+#### Annotation in ExpressionSet
+*annotation* argument in an ExpressionSet points to a character describing the platform on which the samples were assayed. This is often the name of a Bioconductor chip annotation package, which facilitated down-stream analysis.
+
+```{r}
+# Set annotation for the ExpressionSet
+annotation(es5859) = "hgfocus.db"
+```
+
+<br>
+
+#### ExperimentData in ExpressionSet
+*experimentData* argument in an ExpressionSet points to an optional MIAME (Minimum Information About a Microarray Experiment) instance with meta-data (e.g., the lab and resulting publications from the analysis) about the experiment.
+
+```{r}
+# Set experimentData for the ExpressionSet
+suppressMessages(library(annotate))
+experimentData(es5859) = pmid2MIAME("17206142")
+```
+
+```{r}
+# Check experimentData
+experimentData(es5859)
+```
+
+```{r}
+# Check abstract
+abstract(es5859)
+```
+
+<br>
+<br>
+
+# Expression array archives
+Expression array archive in the US:
+
+* Gene Expression Omnibus (GEO)
+* Package: *GEOquery*
+
+Expression array archive in Europe:
+
+* European Molecular Biology Laboratories (EMBL)
+* Package: *ArrayExpress*
+
+<br>
+
+#### Obtaining the ExpressionSet for a GEO series
+```{r}
+suppressMessages(library(GEOquery))
+# glioMA = getGEO("GSE78703")[[1]]
+```
+
+<br>
+
+#### Obtaining the ExpressionSet for a EMBL series
+```{r}
+suppressMessages(library(ArrayExpress))
+# glioMA = getAE("E-MTAB-5797")
+```
+
+<br>
+<br>
+
+# SummarizedExperiment
+*colData()*: get the sample-level data
+
+```{r}
+# Load sample data (RNA-seq study)
+suppressMessages(library(airway))
+suppressMessages(library(SummarizedExperiment))
+data(airway)
+```
+
+```{r}
+# Get metadata about the experiment
+metadata(airway)
+```
+
+```{r}
+# Get the first five feature names
+rownames(airway)[1:5]
+```
+
+```{r}
+# Get the first five exon coordinates for a specific gene
+rowRanges(airway)$ENSG00000172057[1:5]
+```
+
+```{r}
+# Get the sample-level data
+colData(airway)
+```
+
+```{r}
+# Check for the existence of overlapping regions in the exon coordinates of one specific gene
+reduce(rowRanges(airway)$ENSG00000172057)
+```
+
+```{r}
+# Summarize data for the sample data
+table(airway$dex)
+```

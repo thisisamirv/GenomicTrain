@@ -1,0 +1,68 @@
+---
+title: "GRanges"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Import packages
+library(GenomicRanges)
+```
+
+```{r}
+# Create an example gene
+gen1 <- GRanges("chr1",IRanges(1000001,1001000),strand="+")
+```
+
+```{r}
+# Get gene spec
+## Start
+start(gen1)
+## End
+end(gen1)
+## Width
+width(gen1)
+## Strand
+strand(gen1)
+## The 'metadata columns', any information stored alongside each range
+mcols(gen1)
+## IRanges
+ranges(gen1)
+## The chromosomes for each ranges
+seqnames(gen1)
+## The possible chromosomes
+seqlevels(gen1)
+## The lengths for each chromosome
+seqlengths(gen1)
+```
+
+<br>
+
+### Intra-range methods
+Affects ranges independently
+
+function    |   description
+---         |   ---
+shift       |   moves left/right
+narrow      |   narrows by relative position within range
+resize      |   resizes to width, fixing start for +, end for -
+flank       |   returns flanking ranges to the left +, or right -
+promoters   |   similar to flank
+restrict    |   restricts ranges to a start and end position
+trim        |   trims out of bound ranges
++/-         |   expands/contracts by adding/subtracting fixed amount
+*           |   zooms in (positive) or out (negative) by multiples
+
+<br>
+
+### Inter-range methods
+
+Affects ranges as a group
+
+function    |   description
+---         |   ---
+range       |   one range, leftmost start to rightmost end
+reduce      |   cover all positions with only one range
+gaps        |   uncovered positions within range
+disjoin     |   breaks into discrete ranges based on original starts/ends

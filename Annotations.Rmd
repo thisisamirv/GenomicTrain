@@ -4,25 +4,103 @@ output:
   html_document:
     df_print: paged
 ---
-
-# Using an of annotation packge
-
+# Reference genomes
 ```{r}
 # Import packages
-library(AnnotationDbi)
-library(org.Hs.eg.db) # or, e.g. Homo.sapiens
-
-# Check package spec
-org.Hs.eg.db
+suppressMessages(library(BSgenome))
+suppressMessages(library(Biostrings))
 ```
 
+```{r}
+# Check some of the available reference genomes
+available.genomes()[1:5]
+```
 
 ```{r}
-# View columns' names
-columns(org.Hs.eg.db)
+# Load Hsapiens.UCSC.hg19 reference seq
+library(BSgenome.Hsapiens.UCSC.hg19)
+hs = BSgenome.Hsapiens.UCSC.hg19
+```
 
-# View the first 10 keys (i.e., values) in a specific column(i.e., keytype)
-keys(org.Hs.eg.db, keytype = "ENSEMBL")[1:10]
+```{r}
+# Acquire a chromosome’s sequence
+hs$chr17
+```
+
+<br>
+<br>
+
+# The transcripts and genes for a reference sequence
+#### UCSC annotation
+```{r}
+# Load Hsapiens.UCSC.hg19 transcripts and genes
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+hs_txdb = TxDb.Hsapiens.UCSC.hg19.knownGene
+hs_txdb
+```
+
+```{r}
+# Get the addresses of genes by Entrez gene IDs
+genes(hs_txdb)
+```
+
+```{r}
+# Get the addresses of exons
+exons(hs_txdb)
+```
+
+```{r}
+# Get the addresses of transcripts
+transcripts(hs_txdb)
+```
+
+```{r}
+# Filter all exons identified for two different genes (by their Entrez gene IDs)
+exons(
+  hs_txdb,
+  columns = c("EXONID", "TXNAME", "GENEID"),
+  filter = list(gene_id = c(100, 101))
+)
+```
+
+<br>
+
+#### ENSEMBL annotation
+```{r}
+# Load Hsapiens.v75 transcripts, genes, and proteins
+suppressMessages(library(ensembldb))
+library(EnsDb.Hsapiens.v75)
+hs_edb = EnsDb.Hsapiens.v75
+hs_edb
+```
+
+```{r}
+# List attributes
+listTables(hs_edb)
+```
+
+```{r}
+# Return seq_name (i.e., chr name) for transcripts of a specific gene
+transcripts(hs_edb,
+            filter = GenenameFilter("ZBTB16"),
+            columns = "seq_name")
+```
+
+<br>
+
+#### OrgDb annotation
+```{r}
+# Import packages
+suppressMessages(library(AnnotationDbi))
+suppressMessages(library(org.Hs.eg.db))
+```
+
+```{r}
+# View the first five columns' names
+columns(org.Hs.eg.db)[1:5]
+
+# View the first 5 keys (i.e., values) in a specific column (i.e., keytype)
+keys(org.Hs.eg.db, keytype = "ENSEMBL")[1:5]
 
 # Map the ID from a specific key (e.g., ENSG00000175899) from its corresponding keytype (e.g., ENSEMBL) to another keytype (e.g., ENTREZID)
 mapIds(org.Hs.eg.db,
@@ -33,7 +111,7 @@ mapIds(org.Hs.eg.db,
 
 ```{r}
 # A process similar to the mapIds function from the AnnotationDbi package, this time in the biomaRt package
-library(biomaRt)
+suppressMessages(library(biomaRt))
 mart <-
   useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
 getBM(
@@ -50,5 +128,68 @@ listAttributes(mart)[1:5,]
 
 # List the first 5 filters for a specific mart object
 listFilters(mart)[1:5,]
+```
+
+<br>
+<br>
+
+# Gene sets and pathways
+#### Gene Ontology
+Gene Ontology (GO) organizes terms relevant to the roles of genes and gene products in:
+
+* biological processes
+* molecular functions
+* cellular components
+
+```{r}
+# Import packages
+suppressMessages(library(GO.db))
+suppressMessages(library(AnnotationDbi))
+```
+
+```{r}
+# View the columns' names
+columns(GO.db)
+
+# View the first 5 keys (i.e., values) in a specific column (i.e., keytype)
+keys(GO.db, keytype = "ONTOLOGY")[1:5]
+```
+
+<br>
+
+#### KEGG: Kyoto Encyclopedia of Genes and Genomes
+```{r}
+# Import packages
+suppressMessages(library(KEGGREST))
+```
+
+```{r}
+# Get data for the gene with the Entrez ID 675 (i.e., BRCA2 gene)
+brca2K = keggGet("hsa:675")
+
+# List gene attributes
+names(brca2K[[1]])
+
+# Get its seq data
+brca2K[[1]]$NTSEQ
+```
+
+```{r}
+# Get the list of genes making up a pathway model
+brpat = keggGet("path:hsa05212")
+
+# List pathway attributes
+names(brpat[[1]])
+
+# Get the Entrez IDs for the first five genes
+brpat[[1]]$GENE[seq(1, 10, 2)]
+```
+
+```{r}
+# Get an illustration of the pathway
+suppressMessages(library(png))
+suppressMessages(library(grid))
+brpng = keggGet("hsa05212", "image")
+grid.raster(brpng)
 ```
 
