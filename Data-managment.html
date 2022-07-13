@@ -1637,6 +1637,25 @@ pre code {
 </div>
 
 
+<div id="plink" class="section level1">
+<h1>PLINK</h1>
+<p>PLINK format:</p>
+<ul>
+<li>.bed: Contains the genomic SNP data (Homozygous normal 00,
+Heterozygous 10, Homozygous variant 11, missing 01)</li>
+<li>.bim: Contains SNPs annotations</li>
+<li>.fam: Contains the subject’s information</li>
+</ul>
+<pre class="r"><code>library(snpStats)</code></pre>
+<pre><code>## Loading required package: survival</code></pre>
+<pre><code>## Loading required package: Matrix</code></pre>
+<pre class="r"><code>snps &lt;-
+  read.plink(bed = &quot;obesity.bed&quot;, bim = &quot;obesity.bim&quot;, fam = &quot;obesity.fam&quot;)
+geno &lt;- snps$genotypes
+pheno &lt;- snps$fam
+annotation &lt;- snps$map</code></pre>
+<p><br> <br></p>
+</div>
 <div id="coordinating-information-from-diverse-tables" class="section level1">
 <h1>Coordinating information from diverse tables</h1>
 <pre class="r"><code># Load sample data

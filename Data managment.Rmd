@@ -4,6 +4,25 @@ output:
   html_document:
     df_print: paged
 ---
+# PLINK
+PLINK format:
+
+* .bed: Contains the genomic SNP data (Homozygous normal 00, Heterozygous 10, Homozygous variant 11, missing 01)
+* .bim: Contains SNPs annotations
+* .fam: Contains the subject’s information
+
+```{r}
+library(snpStats)
+snps <-
+  read.plink(bed = "obesity.bed", bim = "obesity.bim", fam = "obesity.fam")
+geno <- snps$genotypes
+pheno <- snps$fam
+annotation <- snps$map
+```
+
+<br>
+<br>
+
 # Coordinating information from diverse tables
 ```{r}
 # Load sample data

@@ -1,0 +1,373 @@
+---
+title: "GWAS"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Import and manage data
+
+```{r}
+# Import packages
+library(snpStats)
+```
+
+```{r}
+# Import the files
+ob.plink <-
+  read.plink(bed = "obesity.bed", bim = "obesity.bim", fam = "obesity.fam")
+```
+
+```{r}
+# Extract the genotype, annotation, family, and phenotype data
+geno <- ob.plink$genotypes
+annotation <- ob.plink$map
+family <- ob.plink$fam
+pheno <- read.delim("obesity.txt")
+```
+
+```{r}
+# Rename the rows of “pheno” with the “id” variable
+rownames(pheno) <- pheno$id
+```
+
+```{r}
+# Select the common individuals between the files
+ids <- intersect(rownames(pheno), rownames(geno))
+geno <- geno[ids,]
+pheno <- pheno[ids,]
+family <- family[ids,]
+```
+
+<br>
+<br>
+<br>
+
+# Quality control (QC)
+it involves:
+
+* QC of SNPs
+* QC of individuals
+* QC of Population ancestry
+
+<br>
+
+### QC of SNPs
+Measures to perform QC:
+
+* Remove SNPs with a high rate of missing
+* Remove rare SNPs (e.g. having low minor allele frequency - MAF)
+* Remove SNPs that do not pass the HWE test
+
+```{r}
+# Import packages
+library(snpStats)
+```
+
+```{r}
+# Filter SNPs with a call rate > 95%, MAF of > 5% and z.HWE < 3.3 (p=0.001) in controls
+controls <- pheno$obese == 0 & !is.na(pheno$obese)
+geno.controls <- geno[controls, ]
+info.snps <- col.summary(geno)
+info.controls <- col.summary(geno.controls)
+use <-
+  info.snps$Call.rate > 0.95 &
+  info.snps$MAF > 0.05 & abs(info.controls$z.HWE < 3.3)
+mask.snps <- use & !is.na(use)
+geno.qc.snps <- geno[, mask.snps]
+annotation <- annotation[mask.snps,]
+```
+
+```{r}
+# Number of SNPs removed for bad call rate
+sum(info.snps$Call.rate < 0.95)
+
+# Number of SNPs removed for low MAF
+sum(info.snps$MAF < 0.05, na.rm = TRUE)
+
+# Number of SNPs that do not pass HWE test
+sum(abs(info.controls$z.HWE > 3.3), na.rm = TRUE)
+
+# The total number of SNPs do not pass QC
+sum(!mask.snps)
+```
+
+<br>
+
+### QC of individuals
+Measures to perform QC:
+
+* The identification of individuals with discordant reported and genomic sex: Males have expected heterozygosity of chromosome X of 0 and females of 0.30.
+* The identification of individuals with outlying missing genotype or heterozygosity rate.
+* The identification of duplicated or related individuals.
+* The identification of individuals of divergent ancestry from the sample.
+
+```{r}
+# Import packages
+library(SNPRelate)
+library(SNPassoc)
+```
+
+```{r}
+# Identifying individuals with sex discrepancies
+geno.X <-
+  geno.qc.snps[, annotation$chromosome == "23" &
+                 !is.na(annotation$chromosome)]
+info.X <- row.summary(geno.X)
+mycol <- ifelse(pheno$gender == "Male", "gray40", "gray80")
+plot(
+  info.X$Heterozygosity,
+  col = mycol,
+  pch = 16,
+  xlab = "Individuals",
+  ylab = "Heterozygosity in chromosome X"
+)
+legend("topright",
+       c("Males", "Females"),
+       col = mycol,
+       pch = 16)
+sex.discrep <-
+  (pheno$gender == "Male" &
+     info.X$Heterozygosity > 0.2) |
+  (pheno$gender == "Female" & info.X$Heterozygosity < 0.2)
+```
+
+```{r}
+# Identifying individuals with outlying heterozygosity from the overall genomic heterozygosity rate
+info.indv <- row.summary(geno.qc.snps)
+MAF <- col.summary(geno.qc.snps)$MAF
+callmatrix <- !is.na(geno.qc.snps)
+hetExp <- callmatrix %*% (2 * MAF * (1 - MAF))
+hetObs <-
+  with(info.indv, Heterozygosity * (ncol(geno.qc.snps)) * Call.rate)
+info.indv$hetF <- 1 - (hetObs / hetExp)
+```
+
+```{r}
+# Identifying individuals whose relatedness is higher than expected
+snpgdsBED2GDS("obesity.bed", "obesity.fam", "obesity.bim", out = "obGDS")
+genofile <- snpgdsOpen("obGDS")
+snps.qc <- colnames(geno.qc.snps)
+snp.prune <-
+  snpgdsLDpruning(genofile, ld.threshold = 0.2, snp.id = snps.qc)
+snps.ibd <- unlist(snp.prune, use.names = FALSE)
+ibd <-
+  snpgdsIBDMoM(genofile,
+               kinship = TRUE,
+               snp.id = snps.ibd,
+               num.thread = 1)
+ibd.kin <- snpgdsIBDSelection(ibd)
+ibd.kin.thres <- subset(ibd.kin, kinship > 0.1)
+ids.rel <-  related(ibd.kin.thres)
+```
+
+```{r}
+# Removing all above (individuals with more than 3-7% missing genotypes, with sex discrepancies, F absolute value > 1 and kinship coefficient > 0.1)
+use <-
+  info.indv$Call.rate > 0.95 &
+  abs(info.indv$hetF) < 0.1 &
+  !sex.discrep & !rownames(info.indv) %in% ids.rel
+mask.indiv <- use & !is.na(use)
+geno.qc <- geno.qc.snps[mask.indiv,]
+pheno.qc <- pheno[mask.indiv,]
+```
+
+```{r}
+# Number of individuals removed to bad call rate
+sum(info.indv$Call.rate < 0.95)
+
+# Number of individuals removed for heterozygosity problems
+sum(abs(info.indv$hetF) > 0.1)
+
+# Number of individuals removed for sex discrepancies
+sum(sex.discrep)
+
+# Number of individuals removed to be related with others
+length(ids.rel)
+
+# The total number of individuals that do not pass QC
+sum(!mask.indiv)
+```
+
+<br>
+
+### QC of Population ancestry
+Ancestral differences can be inferred with principal component analysis (PCA) on the genomic data. Individuals with outlying ancestry can be removed from the study while smaller differences in ancestry can be adjusted in the association models, including the first principal components as covariates.
+
+```{r}
+# Import packages
+library(SNPRelate)
+```
+
+```{r}
+# Compute PCA on genomic data
+pca <-
+  snpgdsPCA(
+    genofile,
+    sample.id = rownames(geno.qc),
+    snp.id = snps.ibd,
+    num.thread = 1
+  )
+
+# Obtain a PCA plot for the first two components
+with(
+  pca,
+  plot(
+    eigenvect[, 1],
+    eigenvect[, 2],
+    xlab = "1st Principal Component",
+    ylab = "2nd Principal Component",
+    main = "Ancestry Plot",
+    pch = 21,
+    bg = "gray90",
+    cex = 0.8
+  )
+)
+```
+
+```{r}
+# Add the first five principal components to the phenotypic information
+pheno.qc <- data.frame(pheno.qc, pca$eigenvect[, 1:5])
+
+# Close the GDS file
+closefn.gds(genofile)
+```
+
+<br>
+<br>
+<br>
+
+# GWAS analysis
+It involves regressing each SNP separately on our trait of interest.
+
+```{r}
+# Import packages
+library(snpStats)
+```
+
+```{r}
+# Analysis for the additive (χ2(1.df)) and the codominant models (χ2(2.df))
+res <- single.snp.tests(obese, data = pheno.qc, snp.data = geno.qc)
+res[1:5, ]
+```
+
+```{r}
+# Analysis for a quantitative trait using the additive model
+res.quant <-
+  snp.rhs.tests(age ~ 1,
+                data = pheno.qc,
+                snp.data = geno.qc,
+                family = "Gaussian")
+head(res.quant)
+```
+
+
+### Adjusting for population stratification
+The inflation of the associations due to undetected latent variables is assessed by quantile-quantile (Q-Q) plots where observed χ2 values are plotted against the expected ones. A Q-Q plot with top SNPs outside the confidence bands indicates that those SNPs are truly associated with the disease and, hence, do not follow the null hypothesis.
+
+```{r}
+# QQ-plot
+chi2 <- chi.squared(res, df=1)
+qq.chisq(chi2)
+```
+
+```{r}
+# Adjust for population stratification using the PCs on genomic data to infer ancestral differences in the sample
+res.adj <-
+  snp.rhs.tests(obese ~ X1 + X2 + X3 + X4 + X5, data = pheno.qc, snp.data =
+                  geno.qc)
+head(res.adj)
+```
+
+```{r}
+# Manhattan plot function
+manhattanPlot <- function(x,
+                          colors = c("grey", "skyblue"),
+                          significantLine = 8,
+                          snpsOfInterest = NULL,
+                          ...) {
+  don <- x %>%
+    
+    # Compute chromosome size
+    group_by(CHR) %>%
+    dplyr::summarise(chr_len = max(BP)) %>%
+    
+    # Calculate cumulative position of each chromosome
+    mutate(tot = cumsum(as.numeric(chr_len)) - chr_len) %>%
+    dplyr::select(-chr_len) %>%
+    
+    # Add this info to the initial dataset
+    left_join(x, ., by = c("CHR" = "CHR")) %>%
+    
+    # Add a cumulative position of each SNP
+    arrange(CHR, BP) %>%
+    mutate(BPcum = BP + tot) %>%
+    
+    # Add highlight and annotation information
+    mutate(is_highlight = ifelse(SNP %in% snpsOfInterest, "yes", "no")) %>%
+    mutate(is_annotate = ifelse(-log10(P) > 8, "yes", "no"))
+  
+  # Prepare X axis
+  axisdf <-
+    don %>% group_by(CHR) %>% dplyr::summarize(center = (max(BPcum) + min(BPcum)) / 2)
+  
+  # Make the plot
+  ggplot(don, aes(x = BPcum, y = -log10(P))) +
+    
+    # Show all points
+    geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = 1.3) +
+    scale_color_manual(values = rep(colors, 22)) +
+    
+    # custom X axis:
+    scale_x_continuous(label = axisdf$CHR, breaks = axisdf$center) +
+    scale_y_continuous(expand = c(0, 0)) +     # remove space between plot area and x axis
+    
+    # Add highlighted points
+    geom_point(
+      data = subset(don, is_highlight == "yes"),
+      color = "orange",
+      size = 2
+    ) +
+    
+    # Add label using ggrepel to avoid overlapping
+    geom_label_repel(data = subset(don, is_annotate == "yes"),
+                     aes(label = SNP),
+                     size = 2) +
+    
+    # Change X-legend
+    xlab("Chromosome") +
+    
+    # Add genome-wide line
+    geom_hline(yintercept = significantLine, linetype = "dashed") +
+    
+    # Custom the theme:
+    theme_bw() +
+    theme(
+      legend.position = "none",
+      panel.border = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank()
+    )
+}
+```
+
+
+```{r}
+# Extract the resulting − log10(P-values) of association for each SNP
+pval.log10 <- -log10(p.value(res.adj))
+
+# Create a Manhattan plot
+library(tidyverse)
+library(ggplot2)
+library(ggrepel)
+pvals <-
+  data.frame(
+    SNP = annotation$snp.name,
+    CHR = annotation$chromosome,
+    BP = annotation$position,
+    P = p.value(res.adj)
+  )
+pvals <- subset(pvals,!is.na(CHR) & !is.na(P))
+
+manhattanPlot(pvals, color = c("gray90", "gray40"))
+```

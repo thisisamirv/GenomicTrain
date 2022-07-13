@@ -2,3 +2,93 @@
 title: "Gene set analysis"
 output: html_notebook
 ---
+# Load and prepare data and gene set
+
+```{r}
+# Import packages
+suppressMessages(library(rafalib))
+suppressMessages(library(GSEABase))
+suppressMessages(library(GSE5859Subset))
+suppressMessages(library(sva))
+suppressMessages(library(limma))
+suppressMessages(library(matrixStats))
+data(GSE5859Subset)
+```
+
+```{r}
+# Check pheno data
+sampleInfo[1:5, ]
+
+# Check exprs data
+geneExpression[1:5, 1:5]
+
+# Check feature data
+geneAnnotation[1:5, ]
+```
+
+```{r}
+# Correct for batch effects
+X = sampleInfo$group
+mod <- model.matrix( ~ X)
+svafit <- sva(geneExpression, mod)
+svaX <- model.matrix( ~ X + svafit$sv)
+lmfit <- lmFit(geneExpression, svaX)
+tt <- lmfit$coef[, 2] * sqrt(lmfit$df.residual) / (2 * lmfit$sigma)
+pval <- 2 * (1 - pt(abs(tt), lmfit$df.residual[1]))
+qval <- p.adjust(pval, "BH")
+```
+
+```{r}
+# Load gene set
+gsets <- getGmt("/Users/av/Git/GenomicTrain/c1.all.v7.5.1.entrez.gmt.txt")
+
+# Check some of the genes associated with a specific gene set (i.e., chrYq11)
+geneIds(gsets[["chrYq11"]])[1:5]
+```
+
+```{r}
+# Map gene set to Affymetrix
+mapGMT2Affy <- function(object, gsets) {
+  ann <- annotation(object)
+  dbname <- paste(ann, "db", sep = ".")
+  require(dbname, character.only = TRUE)
+  gns <- featureNames(object)
+  map <-
+    select(get(dbname),
+           keys = gns,
+           columns = c("ENTREZID", "PROBEID"))
+  map <- split(map[, 1], map[, 2])
+  indexes <- sapply(gsets, function(ids) {
+    gns2 <- unlist(map[geneIds(ids)])
+    match(gns2, gns)
+  })
+  names(indexes) <- names(gsets)
+  return(indexes)
+}
+rownames(sampleInfo) <- colnames(geneExpression)
+e = ExpressionSet(
+  assay = geneExpression,
+  phenoData = AnnotatedDataFrame(sampleInfo),
+  annotation = "hgfocus"
+)
+gsids <- mapGMT2Affy(e, gsets)
+```
+
+<br>
+<br>
+
+# Approaches based on association tests
+
+```{r}
+# Apply a chi-square test for independence to see if differentially expressed genes are enriched in a given gene set (for one of the Y chromosome gene sets)
+tab <-
+  table(ingenset = 1:nrow(e) %in% gsids[["chrYq11"]],
+        signif = qval < 0.05)
+tab
+chisq.test(tab)$p.val
+```
+
+<br>
+<br>
+
+# Gene set summary statistics

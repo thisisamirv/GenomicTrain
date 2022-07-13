@@ -1,0 +1,11 @@
+/Users/av/Git/GenomicTrain/Obesity/rawData/CASE369.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/rawData/CASE371.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/rawData/CASE377.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/rawData/CONTROL152.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/rawData/CONTROL191.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/gen.info.Rdata filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA1 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA2 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA3 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA4 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA5 filter=lfs diff=lfs merge=lfs -text
