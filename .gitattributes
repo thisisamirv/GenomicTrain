@@ -9,3 +9,5 @@
 /Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA3 filter=lfs diff=lfs merge=lfs -text
 /Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA4 filter=lfs diff=lfs merge=lfs -text
 /Users/av/Git/GenomicTrain/Obesity/SBL/setupGADA5 filter=lfs diff=lfs merge=lfs -text
+obesity.bed filter=lfs diff=lfs merge=lfs -text
+obGDS filter=lfs diff=lfs merge=lfs -text
