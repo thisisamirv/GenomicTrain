@@ -17,3 +17,9 @@ rawdata filter=lfs diff=lfs merge=lfs -text
 /Users/av/Git/GenomicTrain/rawData/CASE377.txt filter=lfs diff=lfs merge=lfs -text
 /Users/av/Git/GenomicTrain/rawData/CONTROL152.txt filter=lfs diff=lfs merge=lfs -text
 /Users/av/Git/GenomicTrain/rawData/CONTROL191.txt filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/gen.info.Rdata filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/setupGADA1 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/setupGADA2 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/setupGADA3 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/setupGADA4 filter=lfs diff=lfs merge=lfs -text
+/Users/av/Git/GenomicTrain/SBL/setupGADA5 filter=lfs diff=lfs merge=lfs -text
