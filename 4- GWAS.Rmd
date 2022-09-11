@@ -25,8 +25,13 @@ Let's load the data for both scenarios:
 # Scenario 1 (S1) - Import data
 annotation_s1 <-
   read.table("Data/SNPmap.txt", header = TRUE, sep = "\t")
-geno_s1 <-
-  read.table("Data/SNPSample.txt", header = TRUE, sep = "\t")
+g1 <- read.table("Data/SNPSample1.txt", header = TRUE, sep = "\t")
+g2 <- read.table("Data/SNPSample2.txt", header = TRUE, sep = "\t")
+g3 <- read.table("Data/SNPSample3.txt", header = TRUE, sep = "\t")
+g4 <- read.table("Data/SNPSample4.txt", header = TRUE, sep = "\t")
+g5 <- read.table("Data/SNPSample5.txt", header = TRUE, sep = "\t")
+geno_s1 <- rbind(g1, g2, g3, g4, g5)
+rm(g1, g2, g3, g4, g5)
 
 # Create genotype column
 geno_s1 = data.frame(geno_s1, genotype = factor(
