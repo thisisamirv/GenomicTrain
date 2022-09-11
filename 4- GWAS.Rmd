@@ -59,6 +59,7 @@ ob.plink_s2 <-
   read.plink(bed = "Data/obesity.bed",
              bim = "Data/obesity.bim",
              fam = "Data/obesity.fam")
+
 geno_s2 <- ob.plink_s2$genotypes
 annotation_s2 <- ob.plink_s2$map
 family_s2 <- ob.plink_s2$fam
