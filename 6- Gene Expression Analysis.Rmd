@@ -39,9 +39,7 @@ print(slides)
 ```{r}
 # Import data
 library(ShortRead)
-seq1 = readFastq("Data/RNAseq1.fastq")
-seq2 = readFastq("Data/RNAseq2.fastq")
-seq <- do.call('append', c(seq1, seq2))
+seq = readFastq("Data/RNAseq.fastq")
 
 # Check sequence reads
 sread(seq)[1:2]
