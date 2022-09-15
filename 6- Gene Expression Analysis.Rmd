@@ -11,7 +11,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
 
-Most expression studies try to identify the subset of genes that are differentially expressed between two or more conditions (differential gene expression (DGE)) analysis.
+Most expression studies try to identify the subset of genes that are differentially expressed between two or more conditions (differential gene expression (DGE) analysis).
 
 **Note:** RNA-seq is the platform of choice for expression studies due to its next generation high-throughput sequencing capabilities.
 
@@ -36,6 +36,7 @@ print(slides)
 ```
 
 ## RNA-seq data
+RNA-Seq (named as an abbreviation of RNA sequencing) is a sequencing technique which uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample. It facilitates the ability to look at alternative gene spliced transcripts, post-transcriptional modifications, gene fusion, SNPs and changes in gene expression over time, or differences in gene expression in different groups or treatments.
 ```{r}
 # Import data
 library(ShortRead)
@@ -164,7 +165,7 @@ report(seqQC, dest = "Output/QCreport")
 
 The "quality score per cycle" graph looks like this:
 ```{r echo=FALSE}
-knitr::include_graphics("Figures/6-1.jpg")
+knitr::include_graphics("Figures/6-1.jpeg")
 ```
 
 ```{bash echo=FALSE}
@@ -223,7 +224,7 @@ MBEI = exprs(MBEI)
 MBEI = log2(MBEI)
 ```
 
-The MASCalls function returns a matrix with flag calls for the expression of each probe in each sample. The flags are P—present, M—marginal, and A—absent. It's best to temove all probes that are flagged as M or A in all arrays.
+The **MASCalls** function returns a matrix with flag calls for the expression of each probe in each sample. The flags are P—present, M—marginal, and A—absent. It's best to remove all probes that are flagged as M or A in all arrays.
 
 ```{r}
 print(MASCalls[1:5, 1:3])
@@ -248,6 +249,23 @@ plot(
 for (j in 2:length(treatcol)) {
   lines(density(RMA[, j]), col = treatcol[j])
 }
+```
+
+Now let's filter out the control probes and the probes that were flagged as A or M:
+```{r}
+# Identify the control probes (Affymetrix uses AFFY in the probe names)
+index1 = grep("AFFX", row.names(RMA), ignore.case = TRUE)
+
+# Count the number of P calls for each probe
+Pcounts = apply(MASCalls, 1, function(x) {
+  length(which(x == "P"))
+})
+
+# Get the indices of those with 4 or less Ps per probe (6 will be A or M)
+index2 = which(Pcounts <= 4)
+
+# Filter them out
+fRMA = RMA[-unique(c(index1, index2)), ]
 ```
 
 Another interesting graph is PCA of the data. We would expect that the samples from the same group would be more similar to each other and cluster together while the distances between groups would be greater. If you notice that the samples group into, e.g., dates of running the hybridization or slide batches (could fit these effects as a color code), then you have a concern. Slides that are very far apart from others (irrespective of group) also should be looked at more closely.
@@ -315,7 +333,7 @@ report(seqQC, dest = "Output/QCreport_2")
 
 The "quality score per cycle" graph looks like this now:
 ```{r echo=FALSE}
-knitr::include_graphics("Figures/6-2.jpg")
+knitr::include_graphics("Figures/6-2.jpeg")
 ```
 
 Things look better now.
@@ -338,3 +356,196 @@ The aligned data is in SAM format. The last step is to convert the SAM file into
 ```
 
 The output should be **sortedAlignedRNA.bam** and the index has the same name with extension **.bai**. Finally, to concatenate data from a sample that is spread across two or more SAM/BAM files, use the **merge** command from samtools.
+
+Now, let's match sequence reads to functional annotations:
+```{r}
+library(GenomicFeatures)
+library(GenomicAlignments)
+library(biomaRt)
+txdb = makeTxDbFromBiomart(biomart = "ENSEMBL_MART_ENSEMBL", dataset = 'btaurus_gene_ensembl')
+txGene = transcriptsBy(txdb, 'gene')
+```
+
+Now to match the genomic data with the annotations:
+```{r}
+# Read in the preprocessed BAM file
+reads = readGAlignments("Data/sortedAlignedRNA.bam")
+reads[1]
+
+# Add ranges
+reads = GRanges(
+  seqnames = seqnames(reads),
+  ranges = IRanges(start = start(reads), end = end(reads)),
+)
+reads[1]
+
+# Create a vector with the number of alignments that correspond to
+# each of the identifiers (gene ids) in txGene
+counts = countOverlaps(txGene, reads)
+head(counts)
+```
+
+
+# Analysis of differential expression (DE)
+## Affymetrix data
+There are many ways of testing for DE ranging from simple mean fold change differences between treatments to mixed models with various effects. We will use linear model.
+
+We need three things:
+
+* Our data
+* A design matrix: simply states which arrays belong to which treatment
+* A contrasts matrix: defines which treatment combinations we want to test
+
+```{r}
+# Design matrix
+Design = cbind(c(rep(1, 5), rep(0, 5)), c(rep(0, 5), rep(1, 5)))
+colnames(Design) = c("ctrl", "treat")
+print(Design)
+
+# Contrasts matrix
+Contrasts = matrix(c(1, -1), byrow = F)
+colnames(Contrasts) = "ctrl-treat"
+rownames(Contrasts) = c("ctrl", "treat")
+print(Contrasts)
+```
+
+Let's fit the model:
+```{r}
+library(limma)
+Fit = lmFit(fRMA, Design)
+Fitc = contrasts.fit(Fit, Contrasts)
+## to test for DE we use an empirical Bayes shrinkage of SEs
+Fitb = eBayes(Fitc)
+
+# Coefficients from model fitted to data and design matrix
+head(Fit$coefficients)
+
+# Next we tested our contrast
+head(Fitc$coefficients)
+```
+
+In our case we know that the contrast is control– treatment, hence any positive difference in expression means that the control is more expressed than the treatment and any negative difference means the treatment is more expressed than the control.
+
+```{r}
+# Retrieve the results from the moderated t-test and corresponding p-values
+## t score
+head(Fitb$t)
+
+## p-value
+head(Fitb$p.value)
+```
+
+If there were more contrasts we could also retrieve the F-statistics and their p-values.
+
+After all, which are the differentially expressed probes?
+```{r}
+res = data.frame(
+  FoldChange = Fitb$coefficients,
+  p.value = Fitb$p.value,
+  Amean = Fitb$Amean
+)
+names(res) = c("FoldChange", "p.value", "Avalue")
+res = res[order(res$p.value), ]
+DE = res[res$p.value < 0.01, ]
+head(DE)
+```
+
+For the case of multiple testing, Bonferroni correction is probably too stringent for most cases. A reasonable compromise option is the Benjamin and Hochberg method:
+```{r}
+adjusted = p.adjust(res$p.value, method = "BH")
+min(adjusted)
+```
+
+Not a single probe survived multiple testing correction. Given the bad quality of three slides and the fact that we did not have a real contrast, it’s probably a good thing.
+
+## RNA-seq data
+First, let's plot gene counts:
+```{r}
+plot(
+  sort(counts),
+  col = "blue",
+  pch = 20,
+  main = "Sorted RNA-seq counts",
+  xlab = "Genes",
+  ylab = "Counts",
+  cex.main = 0.9
+)
+```
+
+How many genes are known?
+```{r}
+length(counts)
+```
+
+How many genes are expressed at least once in this sample?
+```{r}
+length(which(counts > 0))
+```
+
+How many transcripts have more than 200 counts?
+```{r}
+length(which(counts >= 200))
+```
+
+How much of the data (in percents) they account for?
+```{r}
+sum(counts[which(counts >= 200)]) / sum(counts) * 100
+```
+
+In our RNA-seq data, we only had one sample. Instead, we will import another data with 20 samples (10 controls × 10treatments) using the same 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
+```{r}
+library(edgeR)
+counts = read.table("Data/RNAdat.txt", header = T, sep = "\t")
+contrast = read.table("Data/RNAcontrast.txt", header = T, sep = "\t")
+
+
+# Create a container to assign group classes to the respective samples
+DGE = DGEList(counts, group = contrast$contrast)
+
+# Estimate the normalization and dispersion factors
+DGE = calcNormFactors(DGE)
+DGE = estimateCommonDisp(DGE)
+DGE = estimateTagwiseDisp(DGE)
+```
+
+Now let's perform a simple contrast between the two groups:
+```{r}
+difexpEx = exactTest(DGE, pair = c("ctrl", "treat"))
+resEx = topTags(difexpEx, n = nrow(DGE))
+outEx = resEx$table
+```
+
+Let's plot the outcomes:
+```{r}
+par(mfrow = c(1, 2))
+plotMeanVar(DGE, show.tagwise.vars = T, NBline = T)
+plotBCV(DGE)
+```
+
+To see the significantly differentially expressed features (p < 0.05) after FDR correction:
+```{r}
+outEx[outEx$FDR<0.05,c(1,2,4)]
+```
+
+The data here is quite bad. Notice that the coefficient of variation is quite high at low counts. We can exclude these from the data and rerun the analysis.
+
+A similar result can be obtained by fitting a GLM model instead of exactTest:
+```{r}
+# Create a design matrix
+design = model.matrix( ~ contrast, contrast)
+
+# Estimate design matrix dispersions
+DGE2 = estimateGLMTrendedDisp(DGE, design)
+DGE2 = estimateGLMTagwiseDisp(DGE2, design)
+
+# Fit model
+fit = glmFit(DGE2, design)
+
+# Test contrast (coef) from design matrix
+difexpGLM = glmLRT(fit, coef = 2)
+
+# Extract outcomes
+res = topTags(difexpGLM, n = nrow(DGE))
+outGLM = res$table
+outGLM[outGLM$FDR < 0.05, ]
+```
