@@ -1,0 +1,103 @@
+---
+title: "Biological vs. Technical Variability"
+output:
+  pdf_document: 
+    number_sections: yes
+    toc: yes
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+Some variability in the data is indeed biological variability, while some are due to technical stuff. In this session we want to check for the difference between the two.
+
+The sample data includes RNA from 12 randomly selected mice from two strains, and two pools with the RNA from all twelve mice from each of the two strains.
+```{r}
+# Import packages and sample data
+library(Biobase)
+library(maPooling)
+data(maPooling)
+```
+
+```{r}
+# Extract and illustrate pheno data to know which mice were included in which samples
+pd <- pData(maPooling)
+pd <- rbind(as.numeric(grepl("b", colnames(pd))), pd)
+rownames(pd)[1] <- "strain"
+```
+
+**Note:** Each row represents a sample and the columns are the mice. The first row represents the strain. A "1" in cell i,j indicates that RNA from mouse j was included in sample i.
+
+```{r}
+# Identifying pooled data rows
+pooled <- data.frame(which(rowSums(pd[-1,]) == 12))
+pooled <- cbind(as.numeric(grepl("b", rownames(pooled))), pooled)
+colnames(pooled) <- c("strain" , "index")
+pooled
+```
+
+```{r}
+# Compare the mean expression between groups for all genes
+pooled_y <- exprs(maPooling[, rownames(pooled)])
+pooled_g <- factor(pooled[, 1])
+
+# t-test
+library(genefilter)
+pooled_tt <- rowttests(pooled_y, pooled_g)
+
+# Check the p-values for the first five genes
+five_genes_pooled <-
+  data.frame(cbind(rownames(pooled_tt)[1:5], pooled_tt$p.value[1:5]))
+colnames(five_genes_pooled) <- c("gene_id", "p-value")
+five_genes_pooled
+```
+
+```{r}
+# Identifying individual data rows
+individuals <- data.frame(which(rowSums(pd[-1,]) == 1))
+individuals <- cbind(as.numeric(grepl("b", rownames(individuals))), individuals)
+colnames(individuals) <- c("strain" , "index")
+individuals
+```
+
+```{r}
+# Remove samples including technical replicates (tr)
+individuals[-c(grep("tr", rownames(individuals))),]
+ind_y <- exprs(maPooling[, rownames(individuals)])
+ind_g <- factor(individuals[, 1])
+```
+
+```{r}
+# Compare variabilities
+technicalsd <- rowSds(pooled_y[, pooled_g == 0])
+biologicalsd <- rowSds(ind_y[, ind_g == 0])
+boxplot(
+  technicalsd,
+  biologicalsd,
+  names = c("technical", "biological"),
+  ylab = "SD"
+)
+```
+
+```{r}
+# Compare the mean expression between groups for all genes
+# t-test
+ind_tt <- rowttests(ind_y, ind_g)
+
+# Check the p-values for the first five genes
+five_genes_ind <- data.frame(cbind(rownames(ind_tt)[1:5],
+                                   ind_tt$p.value[1:5]))
+colnames(five_genes_ind) <- c("gene_id", "p-value")
+five_genes_ind
+```
+
+```{r}
+# Compare p-values between the two models
+five_genes <- data.frame(cbind(five_genes_pooled[, 2], five_genes_ind[, 2]))
+colnames(five_genes) <- c("pooled", "individuals")
+five_genes
+```
+
