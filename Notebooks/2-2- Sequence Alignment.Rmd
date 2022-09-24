@@ -11,6 +11,24 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
 
+# NGS sequencers output
+NGS sequencers generate data in FASTQ and CSFASTA (FASTA) formats:
+
+* FASTA files: the most common standard for storing reference or consensus sequence data. FASTA only stores sequences.
+* FASTQ files: the most common format for storing raw sequence data. FASTQ stores both sequence and associated sequence quality values (QV).
+
+## FASTQ file
+Let's check a FASTQ file:
+```{bash}
+head -n 4 Data/SRR835775_1.first1000.fastq | less -S
+```
+
+## FASTA file
+Now let's check a FASTA file:
+```{bash}
+head -n 1000 Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -5 | less -S
+```
+
 # RNA-seq
 Initially, we should go from reads to transcripts. Note that a gene might also have different transcripts.
 
@@ -18,30 +36,19 @@ Initially, we should go from reads to transcripts. Note that a gene might also h
 
 Approaches to transcript building:
 
-* Assembly approaches (i.e., starts with FASTQ): Trinity, Velvet/Oases, etc.
-* Alignment approaches (to a reference genome): (i.e., starts with SAM/BAM): Cufflinks, Scripture, etc.
-
-## Check reads (FASTQ)
-FASTA vs. FASTQ:
-
-* FASTA files: the most common standard for storing reference or consensus sequence data. FASTA only stores sequences.
-* FASTQ files: the most common format for storing raw sequence data. FASTQ stores both sequence and associated sequence quality values.
-
-Looking at the reads in a FASTQ file:
-```{bash}
-head Data/SRR1039508.fastq
-```
+* Assembly approaches
+* Alignment approaches (to a reference genome): BWA, Bowtie2, STAR
 
 ## Alignment with STAR
 
 1- Prepare the reference genome FASTA file (only chromosome 1 for this example). Take a peak:
 ```{bash}
-head -n 1000 Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -20 | less -S
+head -n 1000 Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -10 | less -S
 ```
 
 2- Prepare the reference genome annotation (gtf) file (only chromosome 1 again). Take a peak:
 ```{bash}
-head -n 1 Reference/Homo_sapiens.GRCh38.107.chrom1.gtf | less -S
+head -n 1 Reference/Homo_sapiens.GRCh38.107.chrom1.gtf | head -c 41 | less -S
 ```
 
 3- Run the code below to generate the genome index:
