@@ -37,10 +37,11 @@ print(slides)
 
 ## RNA-seq data
 RNA-Seq (named as an abbreviation of RNA sequencing) is a sequencing technique which uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample. It facilitates the ability to look at alternative gene spliced transcripts, post-transcriptional modifications, gene fusion, SNPs and changes in gene expression over time, or differences in gene expression in different groups or treatments.
+
 ```{r}
 # Import data
 library(ShortRead)
-seq = readFastq("Data/RNAseq.fastq")
+seq = readFastq("Data/RNAseq.fastq.gz")
 
 # Check sequence reads
 sread(seq)[1:2]
@@ -157,7 +158,7 @@ Overall, it seems that slides C1 and T1 could be excluded due to low quality.
 For RNA-seq data, **fastQC** is a popular non-R program for QC. A similar job can be done in R with **ShortRead** package.
 ```{r}
 # QC
-seqQC = qa("Data/RNAseq.fastq")
+seqQC = qa("Data/RNAseq.fastq.gz")
 
 # Save report
 report(seqQC, dest = "Output/QCreport")
@@ -306,7 +307,10 @@ Steps required include:
 
 A good program for Illumina data is **trimmomatic**:
 ```{bash}
-Java -jar /Users/av/Trimmomatic/dist/jar/trimmomatic-0.40-rc1.jar SE -phred33 Data/RNAseq.fastq Output/trimmedRNA.fastq ILLUMINACLIP:/Users/av/Trimmomatic/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50 HEADCROP:10 CROP:80
+Java -jar /Users/amirvalizadeh/Trimmomatic/dist/jar/trimmomatic-0.40-rc1.jar \
+SE -phred33 Data/RNAseq.fastq.gz Output/trimmedRNA.fastq \
+ILLUMINACLIP:/Users/amirvalizadeh/Trimmomatic/adapters/TruSeq3-PE.fa:2:30:10 \
+LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50 HEADCROP:10 CROP:80
 ```
 
 Notice that:
@@ -321,7 +325,16 @@ Notice that:
 * **CROP** deletes everything after the first 80 bases (recall the quality was not so good after 80 cycles).
 
 Now, let's run QC again:
-For RNA-seq data, **fastQC** is a popular non-R program for QC. A similar job can be done in R with **ShortRead** package.
+For RNA-seq data, **fastQC** is a popular non-R program for QC.
+```{bash}
+fastqc --noextract Output/trimmedRNA.fastq --outdir Output/
+```
+
+The output looks like this:
+
+![7-2](Figures/7-2.jpeg)
+
+A similar job can be done in R with **ShortRead** package.
 ```{r}
 # QC
 seqQC = qa("Output/trimmedRNA.fastq")
@@ -332,13 +345,15 @@ report(seqQC, dest = "Output/QCreport_2")
 
 The "quality score per cycle" graph looks like this now:
 
-![7-2](Figures/7-2.jpeg)
+![7-3](Figures/7-3.jpeg)
 
 Things look better now.
 
 ```{bash echo=FALSE}
 rm -rf Output/QCreport_2
 rm Output/trimmedRNA.fastq
+rm Output/trimmedRNA_fastqc.zip
+rm Output/trimmedRNA_fastqc.html
 ```
 
 Now we have to align the data against a reference genome. **bowtie2** is a good software for this. For this purpose, first download the reference genome (index) from [bowtie2 website](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) or [Illumina website](http://support.illumina.com/sequencing/sequencing_software/igenome.html) and then run the following codes:
@@ -360,7 +375,9 @@ Now, let's match sequence reads to functional annotations:
 library(GenomicFeatures)
 library(GenomicAlignments)
 library(biomaRt)
-txdb = makeTxDbFromBiomart(biomart = "ENSEMBL_MART_ENSEMBL", dataset = 'btaurus_gene_ensembl')
+txdb = makeTxDbFromBiomart(biomart = "ENSEMBL_MART_ENSEMBL",
+                           dataset = 'btaurus_gene_ensembl',
+                           host = "https://asia.ensembl.org")
 txGene = transcriptsBy(txdb, 'gene')
 ```
 
@@ -376,13 +393,15 @@ reads = GRanges(
   ranges = IRanges(start = start(reads), end = end(reads)),
 )
 reads[1]
+```
 
+Now to perform gene expression quantification:
+```{r}
 # Create a vector with the number of alignments that correspond to
 # each of the identifiers (gene ids) in txGene
 counts = countOverlaps(txGene, reads)
 head(counts)
 ```
-
 
 # Analysis of differential expression (DE)
 ## Affymetrix data
@@ -457,6 +476,11 @@ min(adjusted)
 Not a single probe survived multiple testing correction. Given the bad quality of three slides and the fact that we did not have a real contrast, it’s probably a good thing.
 
 ## RNA-seq data
+There are two main approaches for RNA-seq analysis:
+
+- Gene or exon counts (edgeR, DESeq, DEXSeq)
+- Assemble transcripts (Trinity, Oases, Cufflinks, Scripture)
+
 First, let's plot gene counts:
 ```{r}
 plot(

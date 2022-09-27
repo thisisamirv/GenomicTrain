@@ -24,9 +24,35 @@ head -n 4 Data/SRR835775_1.first1000.fastq | less -S
 ```
 
 ## FASTA file
-Now let's check a FASTA file:
+Now let's check the FASTA file of human genome chromosome 1:
 ```{bash}
-head -n 1000 Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -5 | less -S
+# Assemble parts
+gunzip -c Reference/Homo_sapiens.GRCh38.dna.chromosome.1.part1.fa.gz > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part1.fa
+gunzip -c Reference/Homo_sapiens.GRCh38.dna.chromosome.1.part2.fa.gz > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part2.fa
+gunzip -c Reference/Homo_sapiens.GRCh38.dna.chromosome.1.part3.fa.gz > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part3.fa
+gunzip -c Reference/Homo_sapiens.GRCh38.dna.chromosome.1.part4.fa.gz > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part4.fa
+gunzip -c Reference/Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa.gz > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa
+
+cat Output/Homo_sapiens.GRCh38.dna.chromosome.1.part1.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part2.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part3.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part4.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa > \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa
+
+rm Output/Homo_sapiens.GRCh38.dna.chromosome.1.part1.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part2.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part3.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part4.fa \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa
+
+# Show
+head -n 1000 Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -5 | less -S
 ```
 
 # RNA-seq
@@ -39,16 +65,50 @@ Approaches to transcript building:
 * Assembly approaches
 * Alignment approaches (to a reference genome): BWA, Bowtie2, STAR
 
+Before continuing, let's check the position of a read (which should be on chr16) using a simple BLAST search:
+```{r}
+library(BSgenome.Hsapiens.UCSC.hg19)
+matchPattern(
+  "TCGATCCATCGATTGGAAGGCACTGATCTGGACTGTCAGGTTGGTGGTCTTATTTGCAAGTCC",
+  Hsapiens$chr16
+)
+```
+
+Now let's check another read:
+```{r}
+library(BSgenome.Hsapiens.UCSC.hg19)
+matchPattern(
+  "TCGCTCTCTCCGTTTCAGGGAAGCCAGCAAGTCCAGTCCGAGTAATGAAGGGCGGGGAGCAGG",
+  Hsapiens$chr16
+)
+```
+
+Nothing? Let's check if it is from the other strand:
+```{r}
+library(BSgenome.Hsapiens.UCSC.hg19)
+matchPattern(reverseComplement(
+  DNAString(
+    "TCGCTCTCTCCGTTTCAGGGAAGCCAGCAAGTCCAGTCCGAGTAATGAAGGGCGGGGAGCAGG"
+  )
+),
+Hsapiens$chr16)
+```
+
 ## Alignment with STAR
 
 1- Prepare the reference genome FASTA file (only chromosome 1 for this example). Take a peak:
 ```{bash}
-head -n 1000 Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -10 | less -S
+head -n 1000 Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -10 | less -S
 ```
 
 2- Prepare the reference genome annotation (gtf) file (only chromosome 1 again). Take a peak:
 ```{bash}
-head -n 1 Reference/Homo_sapiens.GRCh38.107.chrom1.gtf | head -c 41 | less -S
+# Assemble
+gunzip -c Reference/Homo_sapiens.GRCh38.107.chrom1.gtf.gz > \
+Output/Homo_sapiens.GRCh38.107.chrom1.gtf
+
+# Show
+head -n 1 Output/Homo_sapiens.GRCh38.107.chrom1.gtf | head -c 41 | less -S
 ```
 
 3- Run the code below to generate the genome index:
@@ -57,8 +117,8 @@ STAR --runThreadN 12 \
 --runMode genomeGenerate \
 --genomeSAindexNbases 12 \
 --genomeDir Output \
---genomeFastaFiles Reference/Homo_sapiens.GRCh38.dna.chromosome.1.fa \
---sjdbGTFfile Reference/Homo_sapiens.GRCh38.107.chrom1.gtf \
+--genomeFastaFiles Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa \
+--sjdbGTFfile Output/Homo_sapiens.GRCh38.107.chrom1.gtf \
 --sjdbOverhang 62
 ```
 
@@ -142,25 +202,13 @@ bam[[1]]$qual[1:4]
 
 At last, let's delete the output files:
 ```{bash}
-rm Output/Aligned.out.bam
-rm Output/Aligned.out.sam
-rm Output/chrLength.txt
-rm Output/chrName.txt
-rm Output/chrNameLength.txt
-rm Output/chrStart.txt
-rm Output/exonGeTrInfo.tab
-rm Output/exonInfo.tab
-rm Output/geneInfo.tab
-rm Output/Genome
-rm Output/genomeParameters.txt
-rm Output/Log.final.out
-rm Output/Log.out
-rm Output/Log.progress.out
-rm Output/SA
-rm Output/SAindex
-rm Output/SJ.out.tab
-rm Output/sjdbInfo.txt
-rm Output/sjdbList.fromGTF.out.tab
-rm Output/sjdbList.out.tab
-rm Output/transcriptInfo.tab
+rm Output/Aligned.out.bam Output/Aligned.out.sam Output/chrLength.txt \
+Output/chrName.txt Output/chrNameLength.txt Output/chrStart.txt \
+Output/exonGeTrInfo.tab Output/exonInfo.tab Output/geneInfo.tab \
+Output/Genome Output/genomeParameters.txt Output/Log.final.out \
+Output/Log.out Output/Log.progress.out Output/SA Output/SAindex \
+Output/SJ.out.tab Output/sjdbInfo.txt Output/sjdbList.fromGTF.out.tab \
+Output/sjdbList.out.tab Output/transcriptInfo.tab \
+Output/Homo_sapiens.GRCh38.107.chrom1.gtf \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa
 ```
