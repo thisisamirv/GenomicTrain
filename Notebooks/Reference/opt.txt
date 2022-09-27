@@ -1,0 +1,11 @@
+# The codes to break Homo_sapiens.GRCh38.dna.chromosome.1.fa into 5 peaces:
+
+head -n 829855 Homo_sapiens.GRCh38.dna.chromosome.1.fa > Homo_sapiens.GRCh38.dna.chromosome.1.part1.fa
+
+head -n 1659710 Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -n 829855 > Homo_sapiens.GRCh38.dna.chromosome.1.part2.fa
+
+head -n 2489565 Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -n 829855 > Homo_sapiens.GRCh38.dna.chromosome.1.part3.fa
+
+head -n 3319420 Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -n 829855 > Homo_sapiens.GRCh38.dna.chromosome.1.part4.fa
+
+head -n 4149275 Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -n 829855 > Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa
