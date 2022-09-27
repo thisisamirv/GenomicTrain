@@ -55,8 +55,18 @@ Output/Homo_sapiens.GRCh38.dna.chromosome.1.part5.fa
 head -n 1000 Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa | tail -5 | less -S
 ```
 
+# Aligned sequences
+The SAM file format External link and its compressed version, the BAM format, were developed to store information about the alignment of sequences to a reference genome.
+
+## SAM file
+Let's check a SAM file:
+```{bash}
+head -n 10 Data/Sample_sam.sam | tail -1 | less -S
+```
+
 # RNA-seq
 Initially, we should go from reads to transcripts. Note that a gene might also have different transcripts.
+Also, it is highly advised to perform some QC and pre-processing before alignment.
 
 ![2-2-1](Figures/2-2-1.jpeg)
 
@@ -94,7 +104,52 @@ matchPattern(reverseComplement(
 Hsapiens$chr16)
 ```
 
-## Alignment with STAR
+## QC and pre-processing
+First, let's run QC using FASTQC algorithm:
+
+```{bash}
+fastqc --noextract Data/SRR1039508.fastq --outdir Output/
+```
+
+The output looks like this:
+
+![2-2-2](Figures/2-2-2.jpeg)
+
+Now let's do some preprocessing. Steps required include:
+
+* Filter the data by removing adapters.
+* Trim low quality cycles.
+* Remove low quality reads.
+
+A good program for Illumina data is **trimmomatic**:
+```{bash}
+Java -jar /Users/amirvalizadeh/Trimmomatic/dist/jar/trimmomatic-0.40-rc1.jar \
+SE -phred33 Data/SRR1039508.fastq Output/SRR1039508_qc.fastq \
+ILLUMINACLIP:/Users/amirvalizadeh/Trimmomatic/adapters/TruSeq3-PE.fa:2:30:10 \
+LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50 HEADCROP:10 CROP:80
+```
+
+Notice that:
+
+* **SE** means single end reads, for paired-end data use **PE**.
+* **phred** is the quality scoring scheme.
+* **ILLUMINACLIP** points to the file with the adapters.
+* **LEADING** and **TRAILING** remove bases at the beginning and end of the reads below a score of 3.
+* **SLIDINGWINDOW** slides across the sequence and removes those inside a window of length 4 that have an average quality below 15.
+* **MINLEN** removes sequences that are shorter than 50 after filtering.
+* **HEADCROP** removes the first 10 sequences at the start of the run.
+* **CROP** deletes everything after the first 80 bases (recall the quality was not so good after 80 cycles).
+
+Now, let's run QC again:
+```{bash}
+fastqc --noextract Output/SRR1039508_qc.fastq --outdir Output/
+```
+
+The output looks like this:
+
+![2-2-3](Figures/2-2-3.jpeg)
+
+## Sequence alignment with STAR
 
 1- Prepare the reference genome FASTA file (only chromosome 1 for this example). Take a peak:
 ```{bash}
@@ -126,7 +181,7 @@ STAR --runThreadN 12 \
 ```{bash}
 STAR --runThreadN 12 \
 --genomeDir Output \
---readFilesIn Data/SRR1039508.fastq
+--readFilesIn Output/SRR1039508_qc.fastq
 
 mv Aligned.out.sam Output/Aligned.out.sam
 mv Log.final.out Output/Log.final.out
@@ -171,16 +226,16 @@ bam <- scanBam("Output/Aligned.out.bam")
 | QUAL      | String  | ASCII of Phred-scaled base quality   |
 
 **QNAME:** Reads/segments having identical QNAME are regarded to come from the same template. A QNAME ‘*’ indicates the information is unavailable.
-**FLAG:**
+**FLAG:** This data could be translated using the following website: *http://broadinstitute.github.io/picard/explain-flags.html*
 
-![2-2-2](Figures/2-2-2.jpeg)
+![2-2-4](Figures/2-2-4.jpeg)
 
 **RNAME:** Reference sequence name of the alignment.
 **POS:** 1-based leftmost mapping POSition of the first CIGAR operation that “consumes” a reference base. The first base in a reference sequence has coordinate 1. POS is set as 0 for an unmapped read without coordinate.
 **MAPQ:** Mapping quality. A value 255 indicates that the mapping quality is not available.
 **CIGAR:**
 
-![2-2-3](Figures/2-2-3.jpeg)
+![2-2-5](Figures/2-2-5.jpeg)
 
 **RNEXT:** Reference sequence name of the primary alignment of the next read in the template. For the last read, the next read is the first read in the template.
 **PNEXT:** 1-based Position of the primary alignment of the next read in the template. Set as 0 when the information is unavailable. This field equals POS at the primary line of the next read.
