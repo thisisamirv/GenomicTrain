@@ -149,7 +149,7 @@ The output looks like this:
 
 ![2-2-3](Figures/2-2-3.jpeg)
 
-## Sequence alignment with STAR
+## Aligning reads to genome with STAR
 
 1- Prepare the reference genome FASTA file (only chromosome 1 for this example). Take a peak:
 ```{bash}
@@ -255,6 +255,35 @@ bam[[1]]$seq[1:4]
 bam[[1]]$qual[1:4]
 ```
 
+## Aligning reads to transcriptome with RSEM
+RSEM expects a GTF file with only exons. So, first let's extract exons from our *gtf* file:
+```{bash}
+awk '$3 == "exon"' Output/Homo_sapiens.GRCh38.107.chrom1.gtf > Output/Homo_sapiens.GRCh38.107.chrom1.exons.gtf
+```
+
+RSEM will then prepare a reference transcriptome against which to align reads.
+```{bash}
+mkdir Output/rsemGenome
+rsem-prepare-reference --gtf Output/Homo_sapiens.GRCh38.107.chrom1.exons.gtf \
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa \
+Output/rsemGenome/GRCh38.107.chrom1
+```
+
+Finally, let's align reads:
+```{bash}
+# rsem-calculate-expression -p 12 Data/SRR1039508.fastq \
+# Output/rsemGenome/GRCh38.107.chrom1 SRR1039508
+```
+
+# IGV
+We can use IGV to visualize sequencing data. In this example, we will take a look at the reads aligned to reference genome in the file *SRR1039508_subset.bam* with its index file named *SRR1039508_subset.bam.bai*.
+
+![2-2-6](Figures/2-2-6.jpeg)
+
+There is also a SNP at basepair number 11119899:
+
+![2-2-7](Figures/2-2-7.jpeg)
+
 At last, let's delete the output files:
 ```{bash}
 rm Output/Aligned.out.bam Output/Aligned.out.sam Output/chrLength.txt \
@@ -265,5 +294,8 @@ Output/Log.out Output/Log.progress.out Output/SA Output/SAindex \
 Output/SJ.out.tab Output/sjdbInfo.txt Output/sjdbList.fromGTF.out.tab \
 Output/sjdbList.out.tab Output/transcriptInfo.tab \
 Output/Homo_sapiens.GRCh38.107.chrom1.gtf \
-Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa
+Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa \
+Output/Homo_sapiens.GRCh38.107.chrom1.exons.gtf Output/SRR1039508_fastqc.html \ SRR1039508_fastqc.zip SRR1039508_qc_fastqc.html \
+SRR1039508_qc_fastqc.zip SRR1039508_qc.fastq
+rm -r Output/rsemGenome
 ```

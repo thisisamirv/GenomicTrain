@@ -1,0 +1,56 @@
+---
+title: "Visualization"
+output:
+  pdf_document: 
+    number_sections: yes
+    toc: yes
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+rm(list = ls())
+```
+
+As an example, let's visualize two neighboring genes of interest in asthma genomics.
+```{r}
+# Import packages
+library(ggbio)
+library(Homo.sapiens)
+library(biovizBase)
+
+# Import data and check it
+data(genesymbol)
+head(genesymbol)
+
+# Obtain GRanges for two specific genes
+oo = genesymbol[c("ORMDL3", "GSDMB")]
+
+# Plot using the Homo.sapiens package as the reference
+ap1 = autoplot(Homo.sapiens, which = oo, gap.geom = "chevron")
+attr(ap1, "hasAxis") = TRUE
+ap1 + xlab("chr17")
+```
+
+As another example, we obtain the GRanges for a different gene and use that to subset the ESRRA binding sites.
+```{r}
+# Import packages
+library(ERBS)
+
+# Import data and check it
+data(GM12878)
+head(GM12878)
+
+# Obtain GRanges for the specific gene
+pl = genesymbol["ATP5D"]
+
+# Plot using the Homo.sapiens package as the reference
+ap2 = autoplot(Homo.sapiens, which = pl + 5000, gap.geom = "chevron")
+ap3 = autoplot(subsetByOverlaps(GM12878, pl + 5000))
+ch = as.character(seqnames(pl)[1])
+tracks(`ESRRA BS` = ap3,
+       TX = ap2,
+       heights = c(1, 3))
+```
+
