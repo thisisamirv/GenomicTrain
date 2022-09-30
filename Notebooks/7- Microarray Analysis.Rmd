@@ -1,5 +1,5 @@
 ---
-title: "Microarray Expression Analysis"
+title: "Microarray Analysis"
 output: 
   pdf_document: 
     number_sections: yes

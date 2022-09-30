@@ -1,5 +1,5 @@
 ---
-title: "RNA-seq Expression Analysis"
+title: "RNA-seq"
 output: 
   pdf_document: 
     number_sections: yes
@@ -57,10 +57,24 @@ library(pasillaBamSubset)
 bam.file <- untreated3_chr4()
 ```
 
+### Scenario 4
+This is an analysis of 22 RNA-seq samples of different human tissues.
+```{r}
+load("Data/wang_eset.RData")
+
+# Take a peak
+## sampleNames: SRX003935 SRX003921 ...
+## featureNames: ENSG00000000003 ENSG00000000005 ...
+exprs(wang.eset)[1:5, 1:3]
+```
+
 # Quality control (QC)
-## Scenario 1
+**S1: **
+<br>
+
 For RNA-seq data, **fastQC** is a popular non-R program for QC.
 ```{bash}
+# S1
 fastqc --noextract Data/RNAseq.fastq.gz --outdir Output/
 ```
 
@@ -88,7 +102,10 @@ rm -rf Output/QCreport
 Notice how quality starts to drop after around 80 bp. In this case we might want to trim the last 10–20. bases.
 
 # Preprocessing
-## Scenario 1
+## Filter reads
+**S1: **
+<br>
+
 Steps required include:
 
 * Filter the data by removing adapters.
@@ -145,6 +162,10 @@ rm Output/trimmedRNA_fastqc.zip
 rm Output/trimmedRNA_fastqc.html
 ```
 
+## Align against reference genome
+**S1: **
+<br>
+
 Now we have to align the data against a reference genome. **bowtie2** is a good software for this. For this purpose, first download the reference genome (index) from [bowtie2 website](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) or [Illumina website](http://support.illumina.com/sequencing/sequencing_software/igenome.html) and then run the following codes:
 ```{bash}
 # bowtie2-align-s -p 80 -x "reference genome" Output/trimmedRNA.fastq -S alignedRNA
@@ -159,7 +180,10 @@ The aligned data is in SAM format. The last step is to convert the SAM file into
 
 The output should be **sortedAlignedRNA.bam** and the index has the same name with extension **.bai**. Finally, to concatenate data from a sample that is spread across two or more SAM/BAM files, use the **merge** command from samtools.
 
-Now, let's match sequence reads to functional annotations:
+## Match sequence reads to functional annotations
+**S1: **
+<br>
+
 ```{r}
 library(GenomicFeatures)
 library(GenomicAlignments)
@@ -181,8 +205,10 @@ reads = GRanges(
 reads[1]
 ```
 
-## Scenario 2
-Let's match sequence reads to functional annotations:
+<br>
+**S2: **
+<br>
+
 ```{r}
 # Create an Rsamtools variable which wraps the BAM files.
 library(Rsamtools)
@@ -201,8 +227,10 @@ for (i in 1:3) {
 }
 ```
 
-## Scenario 3
-Let's match sequence reads to functional annotations:
+<br>
+**S3: **
+<br>
+
 ```{r}
 library(Rsamtools)
 bf <- BamFile(bam.file)
@@ -220,27 +248,25 @@ for (i in 1:2) {
 
 We can subset to only the genes on chromosome 4 using the following R command:
 ```{r}
+# S3
 chr4.idx <- all(seqnames(ebg) == "chr4")
 ebg.sub <- ebg[chr4.idx]
 ```
 
+## Create count matrix
+**S1: **
+<br>
 
-# Analysis of differential expression (DE)
-## Scenario 1
-There are two main approaches for RNA-seq analysis:
-
-- Gene or exon counts (edgeR, DESeq, DEXSeq)
-- Assemble transcripts (Trinity, Oases, Cufflinks, Scripture)
-
-Now to perform gene expression quantification:
 ```{r}
 # Create a vector with the number of alignments that correspond to
-# each of the identifiers (gene ids) in txGene
+# each of the gene ids in txGene
 counts = countOverlaps(txGene, reads)
-head(counts)
+
+# Take a peak
+counts[1:5, c(1, 2, 15, 16)]
 ```
 
-First, let's plot gene counts:
+Let's plot gene counts:
 ```{r}
 plot(
   sort(counts),
@@ -273,7 +299,289 @@ How much of the data (in percents) they account for?
 sum(counts[which(counts >= 200)]) / sum(counts) * 100
 ```
 
-In our RNA-seq data, we only had one sample. Instead, we will import another data with 20 samples (10 controls × 10treatments) using the same 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
+<br>
+**S2: **
+<br>
+
+The following code creates a *SummarizedExperiment* containing the counts for the reads in each BAM file (columns) for each gene in `exons.by.gene` (the rows). We add the `sample.table` as column data. Remember, we know the order is correct, because the `bam.list` was constructed from a column of `sample.table`.
+
+```{r}
+# Create a SummarizedExperiment containing the counts for the reads in each
+# BAM file (columns) for each gene in `exons.by.gene` (the rows).
+library(GenomicAlignments)
+se <-
+  summarizeOverlaps(
+    exons.by.gene,
+    bam.list,
+    mode = "Union",
+    singleEnd = FALSE,
+    ignore.strand = TRUE,
+    fragments = TRUE
+)
+
+# Add the sample.table as column data.
+colData(se) <- DataFrame(sample.table)
+
+# Take a peak
+assay(se)[1:4, 1:3]
+```
+
+<br>
+**S3: **
+<br>
+
+```{r}
+# Create a SummarizedExperiment containing the counts for the reads in each
+# BAM file (columns) for each gene in `exons.by.gene` (the rows).
+library(GenomicAlignments)
+se_2 <-
+  summarizeOverlaps(
+    ebg.sub,
+    bam.file,
+    mode = "Union",
+    singleEnd = FALSE,
+    ignore.strand = TRUE,
+    fragments = FALSE
+)
+
+# Take a peak
+assay(se_2)[1:4, 1]
+```
+
+How many fragments overlap the first gene, *FBgn0002521*?
+```{r}
+assay(se_2)[1:2, 1]
+```
+
+<br>
+**S4: **
+<br>
+
+Let's take a subset of the count matrix and the column data:
+```{r}
+count.matrix_4 <- exprs(wang.eset)[, 10:21]
+col.data_4 <- pData(wang.eset)[10:21, ]
+```
+
+## Visualizing sample-sample distances
+**S2: **
+<br>
+
+Let's create a plot of count genes on the un-transformed scale:
+```{r}
+# Load data
+library(airway)
+data(airway)
+airway
+
+# Take a peak
+colData(airway)[, 1:3]
+for (i in c(1, 5, 10)) {
+  print(rowRanges(airway)[[i]][1:3])
+}
+assay(airway)[1:4, 1:3]
+```
+
+```{r}
+# Create a plot of count genes on the un-transformed scale
+library(rafalib)
+mypar()
+plot(assay(airway)[, 1:2], cex = .1)
+```
+
+Note that, on the un-transformed scale, the high count genes have high variance. We will explore different scaling and transformations options below.
+
+## Normalization for sequencing depth
+**S2: **
+<br>
+
+*Remember: * Sequencing depth refers to the number of reads that are sequenced. At a higher cost, a higher depth can be obtained which improves statistical power. Note that adding more depth after 10M reads does not greatly increase power.
+
+Let's check for sequencing depth variability:
+```{r}
+# Get the number of paired-end reads which align to the genes for each sample
+SeqDep = colSums(assay(airway))
+
+# Sort it and divide it by 1 million
+sort(SeqDep) / 1e6
+```
+
+The wide range is indicative of sequencing depth variability. Now to account for this variability, first, we need to convert the *SummarizedExperiment* object to a *DESeqDataSet* object. We need to specify an experimental *design* here. The design starts with the tilde symbol `~`, which means, model the counts using the following variables: compare levels of `dex` while controlling for the `cell` differences.
+```{r}
+library(DESeq2)
+dds <- DESeqDataSet(airway, design = ~ cell + dex)
+```
+
+Now, estimate size factors to account for differences in sequencing depth. Size factors are calculated by the median ratio of samples to a pseudo-sample (the geometric mean of all samples):
+```{r}
+dds <- estimateSizeFactors(dds)
+plot(sizeFactors(dds), colSums(counts(dds)))
+abline(lm(colSums(counts(dds)) ~ sizeFactors(dds) + 0))
+```
+
+Now, make a matrix of log normalized counts:
+```{r}
+log.norm.counts <- log2(counts(dds, normalized = TRUE) + 1)
+
+# Another way to make this matrix
+log.norm <- normTransform(dds)
+```
+
+Let's examine the difference between the log counts and the log normalized counts:
+```{r}
+rs <- rowSums(counts(dds))
+mypar(1,2)
+
+# Log counts
+boxplot(log2(counts(dds)[rs > 0, ] + 1))
+
+# Log normalized counts
+boxplot(log.norm.counts[rs > 0, ])
+```
+
+Compare the log normalized counts vs gene counts on the un-transformed scale:
+```{r}
+mypar(2, 1)
+plot(assay(airway)[, 1:2], cex = .1)
+plot(assay(log.norm)[, 1:2], cex = .1)
+```
+
+<br>
+**S4: **
+<br>
+
+Now to account for sequence depth variability, first, we need to convert the *SummarizedExperiment* object to a *DESeqDataSet* object.
+```{r}
+dds_4 <- DESeqDataSetFromMatrix(count.matrix_4,
+                                col.data_4,
+                                design = ~ cell.type)
+```
+
+Now, estimate size factors to account for differences in sequencing depth:
+```{r}
+dds_4 <- estimateSizeFactors(dds_4)
+```
+
+What tissue has the highest size factor?
+```{r}
+dds_4$cell.type[which.max(sizeFactors(dds_4))]
+```
+
+## Stabilizing count variance
+**S2: **
+<br>
+
+Now we will use a more sophisticated transformation. It uses the variance model for count data to shrink together the log-transformed counts for genes with very low counts.
+```{r}
+rld <- rlog(dds)
+
+# Compare with the previous counts
+mypar(3, 1)
+plot(assay(airway)[, 1:2], cex = .1)
+plot(assay(log.norm)[, 1:2], cex = .1)
+plot(assay(rld)[, 1:2], cex = .1)
+```
+
+Let's examine the difference between log normalized counts and rlog transformations:
+```{r}
+library(vsn)
+
+# Log norm counts
+meanSdPlot(log.norm.counts, ranks = FALSE, ylim = c(0, 3), main = "log norm")
+
+# rlog
+meanSdPlot(assay(rld), ranks = FALSE, ylim = c(0, 3), main = "rlog")
+```
+
+The principal components (PCA) plot is a useful diagnostic for examining relationships between samples:
+```{r}
+mypar()
+rv <- apply(log.norm.counts, 1, var)
+topgenes <- head(order(rv, decreasing = TRUE), 500)
+pc <- prcomp(t(log.norm.counts[topgenes, ]))
+plot(pc$x[, 1],
+     pc$x[, 2],
+     # Color the points by intervention group
+     col = colData(dds)$dex,
+     # Give a symbol to each point based on the cell type
+     pch = as.integer(colData(dds)$cell))
+```
+
+<br>
+**S4: **
+<br>
+
+To stabilize count variance:
+```{r}
+vsd <- varianceStabilizingTransformation(dds_4, blind = FALSE)
+plot(assay(vsd)[, 1:2], cex = .1)
+```
+
+The principal components (PCA) plot:
+```{r}
+mypar()
+plotPCA(vsd, intgroup = "cell.type")
+```
+
+Make a scatterplot matrix of some of the samples' transformed counts:
+```{r}
+# Row mean of rlog-transformed data
+rmeans <- rowMeans(assay(vsd))
+
+# Pick some samples for visualization
+idx <- c(1, 2, 10, 7, 8, 9, 12)
+
+# Pull out a small matrix of rlog-transformed counts
+mat <- assay(vsd)[rmeans > 1, idx]
+
+# Name the columns of matrix by cell type
+colnames(mat) <- vsd$cell.type[idx]
+```
+
+Make a fast, subsetted scatter plot on top and add Pearson correlations below:
+```{r}
+panel.sub <-
+  function(x, y, ...)
+    points(cbind(x, y)[sample(length(x), 1000), ], ...)
+panel.cor <-
+  function(x,
+           y,
+           digits = 2,
+           prefix = "",
+           cex.cor,
+           ...)  {
+    usr <- par("usr")
+    on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if (missing(cex.cor)) {
+      cex.cor <- 0.8 / strwidth(txt)
+    }
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+  }
+pairs(
+  mat,
+  asp = 1,
+  col = rgb(0, 0, 0, .3),
+  lower.panel = panel.cor,
+  upper.panel = panel.sub
+)
+```
+
+# Analysis of differential expression (DE)
+There are two main approaches for RNA-seq analysis:
+
+- DE at gene level: consists of gene or exon counts (edgeR, DESeq, DEXSeq)
+- DE across isoforms: includes assembling transcripts (Trinity, Oases, Cufflinks, Scripture)
+
+Now let's perform gene expression quantification.
+
+**S1: **
+<br>
+
+In our RNA-seq data for S1, we only had one sample. Instead, we will import another data with 20 samples (10 controls × 10treatments) using the same 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
 ```{r}
 library(edgeR)
 counts = read.table("Data/RNAdat.txt", header = T, sep = "\t")
@@ -305,7 +613,7 @@ plotBCV(DGE)
 
 To see the significantly differentially expressed features (p < 0.05) after FDR correction:
 ```{r}
-outEx[outEx$FDR<0.05,c(1,2,4)]
+outEx[outEx$FDR < 0.05, c(1, 2, 4)][1:5, ]
 ```
 
 The data here is quite bad. Notice that the coefficient of variation is quite high at low counts. We can exclude these from the data and rerun the analysis.
@@ -328,119 +636,56 @@ difexpGLM = glmLRT(fit, coef = 2)
 # Extract outcomes
 res = topTags(difexpGLM, n = nrow(DGE))
 outGLM = res$table
-outGLM[outGLM$FDR < 0.05, ]
+outGLM[outGLM$FDR < 0.05, ][1:5, ]
 ```
 
-## Scenario 2
-The following code creates a *SummarizedExperiment* containing the counts for the reads in each BAM file (columns) for each gene in `exons.by.gene` (the rows). We add the `sample.table` as column data. Remember, we know the order is correct, because the `bam.list` was constructed from a column of `sample.table`.
+<br>
+**S2: **
+<br>
 
+We begin by modeling raw counts. Note that it is better to model raw counts rather than modeling normalized counts as we will know the distribution. We will use negative binomial distribution in here. Remeber our DESeqDataSet:
 ```{r}
-# Create a SummarizedExperiment containing the counts for the reads in each
-# BAM file (columns) for each gene in `exons.by.gene` (the rows).
-library(GenomicAlignments)
-se <-
-  summarizeOverlaps(
-    exons.by.gene,
-    bam.list,
-    mode = "Union",
-    singleEnd = FALSE,
-    ignore.strand = TRUE,
-    fragments = TRUE
-)
+# Design of DESeqDataSet
+design(dds)
 
-# Add the sample.table as column data.
-colData(se) <- DataFrame(sample.table)
-
-# Take a peak
-assay(se)
+# Column data
+colData(dds)[1:4, 1:4]
 ```
 
-### Visualizing sample-sample distances
-Let's create a plot of count genes on the un-transformed scale:
+As we want to look at the fold change of treated vs. untreated, we should re-level the data:
 ```{r}
-# Load data
-library(airway)
-data(airway)
-airway
+# Current levels
+levels(dds$dex)
 
-# Take a peak
-colData(airway)
-for (i in c(1, 5, 10)) {
-  print(rowRanges(airway)[[i]][1:3])
-}
-head(assay(airway))
+# Re-level
+dds$dex <- relevel(dds$dex, "untrt")
 ```
 
+Run DESeq model:
 ```{r}
-# Create a plot of count genes on the un-transformed scale
-library(rafalib)
-mypar()
-plot(assay(airway)[, 1:2], cex = .1)
+dds <- DESeq(dds)
+
+# Save results
+res_2 <- results(dds)
+
+# Show results
+head(res_2)
 ```
 
-Note that, on the un-transformed scale, the high count genes have high variance. We will explore different scaling and transformations options below.
-
-### Normalization for sequencing depth
-First, we need to convert the *SummarizedExperiment* object to a *DESeqDataSet* object. We need to specify an experimental *design* here. The design starts with the tilde symbol `~`, which means, model the counts using the following variables: compare levels of `dex` while controlling for the `cell` differences.
+How many genes were significant at p < 0.1 after correction for FDR?
 ```{r}
-library(DESeq2)
-dds <- DESeqDataSet(airway, design = ~ cell + dex)
+table(res_2$padj < 0.1)
 ```
 
-Now, estimates size factors to account for differences in sequencing depth. Size factors are calculated by the median ratio of samples to a pseudo-sample (the geometric mean of all samples):
-```{r}
-dds <- estimateSizeFactors(dds)
-```
+<br>
+**S3: **
+<br>
 
-Now, make a matrix of log normalized counts:
-```{r}
-log.norm <- normTransform(dds)
-```
+<br>
+**S4: **
+<br>
 
-Compare the log normalized counts vs gene counts on the un-transformed scale:
-```{r}
-mypar(2, 1)
-plot(assay(airway)[, 1:2], cex = .1)
-plot(assay(log.norm)[, 1:2], cex = .1)
-```
-
-### Stabilizing count variance
-Now we will use a more sophisticated transformation. It uses the variance model for count data to shrink together the log-transformed counts for genes with very low counts.
-```{r}
-rld <- rlog(dds)
-
-# Compare with the previous counts
-mypar(3, 1)
-plot(assay(airway)[, 1:2], cex = .1)
-plot(assay(log.norm)[, 1:2], cex = .1)
-plot(assay(rld)[, 1:2], cex = .1)
-```
-
-## Scenario 3
-```{r}
-# Create a SummarizedExperiment containing the counts for the reads in each
-# BAM file (columns) for each gene in `exons.by.gene` (the rows).
-library(GenomicAlignments)
-se_2 <-
-  summarizeOverlaps(
-    ebg.sub,
-    bam.file,
-    mode = "Union",
-    singleEnd = FALSE,
-    ignore.strand = TRUE,
-    fragments = FALSE
-)
-
-# Take a peak
-assay(se_2)[1:4, 1]
-```
-
-How many fragments overlap the first gene, *FBgn0002521*?
-```{r}
-assay(se_2)[1:2, 1]
-```
-
-Finally, let's delete extra files:
-```{bash}
+```{bash  echo=FALSE}
+# Delete extra files
 rm Output/RNAseq_fastqc.html Output/RNAseq_fastqc.zip
 ```
