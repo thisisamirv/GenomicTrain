@@ -284,18 +284,7 @@ There is also a SNP at basepair number 11119899:
 
 ![2-2-7](Figures/2-2-7.jpeg)
 
-At last, let's delete the output files:
-```{bash}
-rm Output/Aligned.out.bam Output/Aligned.out.sam Output/chrLength.txt \
-Output/chrName.txt Output/chrNameLength.txt Output/chrStart.txt \
-Output/exonGeTrInfo.tab Output/exonInfo.tab Output/geneInfo.tab \
-Output/Genome Output/genomeParameters.txt Output/Log.final.out \
-Output/Log.out Output/Log.progress.out Output/SA Output/SAindex \
-Output/SJ.out.tab Output/sjdbInfo.txt Output/sjdbList.fromGTF.out.tab \
-Output/sjdbList.out.tab Output/transcriptInfo.tab \
-Output/Homo_sapiens.GRCh38.107.chrom1.gtf \
-Output/Homo_sapiens.GRCh38.dna.chromosome.1.fa \
-Output/Homo_sapiens.GRCh38.107.chrom1.exons.gtf Output/SRR1039508_fastqc.html \ SRR1039508_fastqc.zip SRR1039508_qc_fastqc.html \
-SRR1039508_qc_fastqc.zip SRR1039508_qc.fastq
+```{bash echo=FALSE}
 rm -r Output/rsemGenome
+rm Output/*
 ```

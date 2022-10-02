@@ -263,7 +263,7 @@ ebg.sub <- ebg[chr4.idx]
 counts = countOverlaps(txGene, reads)
 
 # Take a peak
-counts[1:5, c(1, 2, 15, 16)]
+counts[1:4]
 ```
 
 Let's plot gene counts:
@@ -513,6 +513,10 @@ plot(pc$x[, 1],
 
 To stabilize count variance:
 ```{r}
+rld_4 <- rlog(dds_4)
+
+## OR
+
 vsd <- varianceStabilizingTransformation(dds_4, blind = FALSE)
 plot(assay(vsd)[, 1:2], cex = .1)
 ```
@@ -571,16 +575,15 @@ pairs(
 ```
 
 # Analysis of differential expression (DE)
-There are two main approaches for RNA-seq analysis:
+There are some approaches for RNA-seq analysis:
 
-- DE at gene level: consists of gene or exon counts (edgeR, DESeq, DEXSeq)
-- DE across isoforms: includes assembling transcripts (Trinity, Oases, Cufflinks, Scripture)
+- DE at gene level: edgeR and DESeq
+- DE at exon level: DEXSeq
+- DE at isoform level: Cufflinks
 
 Now let's perform gene expression quantification.
 
-**S1: **
-<br>
-
+## Senario 1
 In our RNA-seq data for S1, we only had one sample. Instead, we will import another data with 20 samples (10 controls × 10treatments) using the same 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
 ```{r}
 library(edgeR)
@@ -639,10 +642,7 @@ outGLM = res$table
 outGLM[outGLM$FDR < 0.05, ][1:5, ]
 ```
 
-<br>
-**S2: **
-<br>
-
+## Senario 2
 We begin by modeling raw counts. Note that it is better to model raw counts rather than modeling normalized counts as we will know the distribution. We will use negative binomial distribution in here. Remeber our DESeqDataSet:
 ```{r}
 # Design of DESeqDataSet
@@ -677,13 +677,431 @@ How many genes were significant at p < 0.1 after correction for FDR?
 table(res_2$padj < 0.1)
 ```
 
-<br>
-**S3: **
-<br>
+Let's visualize results using MA plot:
+```{r}
+DESeq2::plotMA(res_2, ylim = c(-5, 5), colSig = "red")
+```
 
-<br>
-**S4: **
-<br>
+The grey values are those with an adjusted p-value of > 0.1 and red values are those with an adjusted p-value of < 0.1.
+
+```{r}
+# Create the same MA plot for LFC of 1
+res.thr <- results(dds, lfcThreshold = 1)
+DESeq2::plotMA(res.thr, ylim = c(-5, 5), colSig = "red")
+```
+
+Let's perform surrogate variable analysis (SVA) to account for hidden batches or other structural differences in the data set:
+```{r}
+library(sva)
+idx <- rowMeans(counts(dds, normalized = TRUE)) > 1
+dat <- counts(dds, normalized = TRUE)[idx, ]
+mod <- model.matrix( ~ dex, colData(dds))
+mod0 <- model.matrix(~ 1, colData(dds))
+svseq <- svaseq(dat, mod, mod0, n.sv = 2)
+```
+
+Plot surrogate variables:
+```{r}
+plot(svseq$sv[, 1], svseq$sv[, 2], col = dds$cell, pch = 16)
+```
+
+We colored the points based on cell type which we know is a real surrogate variable. As you can see, this difference was really captured by the SVA plot.
+
+Now, to use these surrogate variables in a **DESeq** call:
+```{r}
+dds.sva <- dds
+dds.sva$SV1 <- svseq$sv[, 1]
+dds.sva$SV2 <- svseq$sv[, 2]
+design(dds.sva) <- ~ SV1 + SV1 + dex
+dds.sva <- DESeq(dds.sva)
+
+```
+
+How many genes were significant at p < 0.1 after correction for FDR?
+```{r}
+res.sva_2 <- results(dds.sva)
+table(res.sva_2$padj < 0.1)
+```
+
+Let's visualize results using MA plot:
+```{r}
+mypar(2, 1)
+DESeq2::plotMA(res_2, ylim = c(-5, 5), colSig = "red", main = "Before SVA")
+DESeq2::plotMA(res.sva_2, ylim = c(-5, 5), colSig = "red", main = "After SVA")
+```
+
+## Senario 4
+In here, we will perform a gene-level DE analysis of brain tissue samples against all other samples. Now we make a new factor column in the colData of dds, which we set to "brain" for cerebellum and mixed brain samples, and "other" for all other samples. We will set "other" as the reference level (the denominator for the fold changes).
+```{r}
+dds_4$type <-
+  factor(ifelse(
+    dds_4$cell.type %in% c("cerebellum", "mixed.brain"),
+    "brain",
+    "other"
+  ))
+dds_4$type <- relevel(dds_4$type, "other")
+```
+
+Now reset the design of the DESeqDataSet:
+```{r}
+design(dds_4) <- ~ type
+```
+
+Run DESeq model:
+```{r}
+dds_4 <- DESeq(dds_4)
+
+# Save results
+res_4 <- results(dds_4)
+```
+
+Let's visualize results using MA plot:
+```{r}
+DESeq2::plotMA(res_4, ylim = c(-10, 10), colSig = "red")
+```
+
+Which gene has the lowest adjusted p-value?
+```{r}
+which(res_4$padj == min(res_4$padj, na.rm = T), )
+```
+
+Make a plot of the normalized counts for that gene:
+```{r}
+plotCounts(dds_4, which.min(res_4$padj), intgroup = "type")
+```
+
+Make normalized counts plots for the top 9 genes:
+```{r}
+par(mfrow = c(3, 3))
+for (i in 1:9) {
+  plotCounts(dds_4, order(res_4$padj)[i], intgroup = "type")
+}
+```
+
+Create the same MA plot for LFC of 2:
+```{r}
+res_4.thr <- results(dds_4, lfcThreshold = 2)
+DESeq2::plotMA(res_4.thr, ylim = c(-10, 10), colSig = "red")
+```
+
+Now, how many genes with adjusted p-value less than 0.1 have a positive LFC?
+```{r}
+summary(res_4.thr)
+```
+
+Build a vector of the names of the top 20 genes by the test statistic (largest first).
+```{r}
+top <- rownames(res_4)[head(order(res_4$stat, decreasing = TRUE), 20)]
+```
+
+Use org.Hs.eg.db to determine the gene symbol of the top gene in this list:
+```{r}
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+
+mapIds(org.Hs.eg.db,
+       keys = "ENSG00000143858",
+       column = "SYMBOL",
+       keytype = "ENSEMBL")
+```
+
+What is the GENENAME of the top gene?
+```{r}
+mapIds(org.Hs.eg.db,
+       keys = "ENSG00000143858",
+       column = "GENENAME",
+       keytype = "ENSEMBL")
+```
+
+Now, let's create a pheatmap:
+```{r}
+res_4Sort <- res_4[order(res_4$padj), ]
+library(pheatmap)
+topgenes_4 <- head(rownames(res_4Sort), 20)
+mat_4 <- assay(rld_4)[topgenes_4, ]
+mat_4 <- mat_4 - rowMeans(mat_4)
+df <- as.data.frame(colData(dds_4)[, c("type", "cell.type")])
+pheatmap(mat_4, annotation_col = df)
+```
+
+Let's perform SVA:
+```{r}
+library(sva)
+idx_4 <- rowMeans(counts(dds_4, normalized = TRUE)) > 1
+dat_4 <- counts(dds_4, normalized = TRUE)[idx_4, ]
+mod_4 <- model.matrix( ~ type, colData(dds_4))
+mod0_4 <- model.matrix(~ 1, colData(dds_4))
+svseq_4 <- svaseq(dat_4, mod_4, mod0_4, n.sv = 2)
+```
+
+Plot surrogate variables:
+```{r}
+plot(svseq_4$sv[, 1], svseq_4$sv[, 2], col = dds_4$cell.type, pch = 16)
+```
+
+## Exon count (Differential exon usage; DEU)
+The **DEXSeq** package offers differential testing of exon usage within each gene. Here we will explore the R code used in a *DEXSeq* analysis. We omit the python calls for preparing the annotation and count tables, but these can be found in the vignette.
+
+```
+python dexseq_prepare_annotation.py gtffile.gtf dexseq.gff
+python dexseq_count.py dexseq.gff sample1.sam sample1.txt
+```
+
+Once we have repeated the `dexseq_count` script for each sample, we can read the data into R. As we are working with pre-prepared data, we first point to these files which live within the *pasilla* package.
+```{r}
+library("pasilla")
+inDir = system.file("extdata", package = "pasilla", mustWork = TRUE)
+countFiles = list.files(inDir, pattern = "fb.txt$", full.names = TRUE)
+flattenedFile = list.files(inDir, pattern = "gff$", full.names = TRUE)
+genesForSubset = read.table(file.path(inDir, "geneIDsinsubset.txt"),
+                            stringsAsFactors = FALSE)[[1]]
+```
+
+As in *DESeq* we use a `sampleTable` to define the samples:
+```{r}
+sampleTable = data.frame(
+  row.names = c(
+    "treated1",
+    "treated2",
+    "treated3",
+    "untreated1",
+    "untreated2",
+    "untreated3",
+    "untreated4"
+  ),
+  condition = c(
+    "knockdown",
+    "knockdown",
+    "knockdown",
+    "control",
+    "control",
+    "control",
+    "control"
+  ),
+  libType = c(
+    "single-end",
+    "paired-end",
+    "paired-end",
+    "single-end",
+    "single-end",
+    "paired-end",
+    "paired-end"
+  )
+)
+sampleTable
+```
+
+We now read the data into a `DEXSeqDataSet` object:
+```{r}
+library("DEXSeq")
+dxd = DEXSeqDataSetFromHTSeq(
+  countFiles,
+  sampleData = sampleTable,
+  design = ~ sample + exon + condition:exon,
+  flattenedfile = flattenedFile
+)
+```
+
+Subset the genes, for demonstration purposes:
+```{r}
+dxd = dxd[geneIDs(dxd) %in% genesForSubset, ]
+```
+
+Now we run the estimation and testing functions:
+```{r}
+dxd = estimateSizeFactors(dxd)
+dxd = estimateDispersions(dxd)
+dxd = testForDEU(dxd)
+dxd = estimateExonFoldChanges(dxd, fitExpToVar = "condition")
+```
+
+The following code extracts a results table, makes an MA-plot, and draws the expression levels over the exons to highlight differential exon usage:
+```{r}
+dxr = DEXSeqResults(dxd)
+plotMA(dxr, cex = 0.8)
+plotDEXSeq(
+  dxr,
+  "FBgn0010909",
+  legend = TRUE,
+  cex.axis = 1.2,
+  cex = 1.3,
+  lwd = 2
+)
+```
+
+Again, drawing the expression levels, now showing the annotated transcripts below:
+```{r}
+plotDEXSeq(
+  dxr,
+  "FBgn0010909",
+  displayTranscripts = TRUE,
+  legend = TRUE,
+  cex.axis = 1.2,
+  cex = 1.3,
+  lwd = 2
+)
+```
+
+Now we will subset to 1000 genes on chr2L which do not have low counts:
+```{r}
+library("DEXSeq")
+dxd = DEXSeqDataSetFromHTSeq(
+  countFiles,
+  sampleData = sampleTable,
+  design = ~ sample + exon + condition:exon,
+  flattenedfile = flattenedFile
+)
+rmean <- rowMeans(counts(dxd))
+dxd2L <- dxd[seqnames(rowRanges(dxd)) == "chr2L" & rmean > 10, ]
+dxd2L <- dxd2L[1:1000, ]
+```
+
+Now we run the estimation and testing functions:
+```{r}
+dxd2L = estimateSizeFactors(dxd2L)
+dxd2L = estimateDispersions(dxd2L)
+dxd2L = testForDEU(dxd2L)
+dxd2L = estimateExonFoldChanges(dxd2L, fitExpToVar = "condition")
+dxr2L = DEXSeqResults(dxd2L)
+```
+
+What is the name of the gene containing the exon with the smallest adjusted p-value for DEU?
+```{r}
+dxr2L[which(dxr2L$padj == min(dxr2L$padj, na.rm = T), ), ]$groupID
+```
+
+Let's make a plot for this gene:
+```{r}
+#plotDEXSeq(
+  #dxr2L,
+  #"FBgn0000256",
+  #legend = TRUE,
+  #cex.axis = 1.2,
+  #cex = 1.3,
+  #lwd = 2,
+  #norCounts = TRUE,
+  #displayTranscripts = TRUE
+#)
+```
+
+
+![8-5](Figures/8-5.jpeg)
+How many transcripts does exonic part E009 appear in?
+**Answer: ** 1
+
+How many transcripts contain exonic part E008 but not exonic part E009?
+**Answer: ** 3
+
+## Differential isoform expression
+In this example, we are not going to use Cufflinks, but instead, we will take a look at its output:
+```{r}
+library(cummeRbund)
+myDir <- system.file("extdata", package = "cummeRbund")
+gtfFile <-
+  system.file("extdata/chr1_snippet.gtf", package = "cummeRbund")
+```
+
+Read in the prepared Cufflinks files from the directory:
+```{r}
+cuff <-
+  readCufflinks(
+    dir = myDir,
+    gtfFile = gtfFile,
+    genome = "hg19",
+    rebuild = TRUE,
+    verbose = FALSE
+  )
+```
+
+Boxplots of expression (FPKM) at the gene and isoform level:
+```{r}
+csBoxplot(genes(cuff))
+csBoxplot(genes(cuff), replicates = TRUE)
+csBoxplot(isoforms(cuff), replicates = TRUE)
+```
+
+Scatterplot matrix of gene and isoform level expression:
+```{r}
+csScatterMatrix(genes(cuff))
+csScatterMatrix(isoforms(cuff))
+```
+
+Sample dendrograms using Jensen-Shannon distances:
+```{r}
+csDendro(genes(cuff), replicates = TRUE)
+csDendro(isoforms(cuff), replicates = TRUE)
+```
+
+MA-plot comparing two conditions:
+```{r}
+MAplot(genes(cuff), "hESC", "Fibroblasts")
+MAplot(isoforms(cuff), "hESC", "Fibroblasts")
+```
+
+A "volcano plot" matrix. Each volcano plot is the -log10(p-value) over the log fold change:
+```{r}
+csVolcanoMatrix(genes(cuff))
+csVolcanoMatrix(isoforms(cuff))
+```
+
+Extract the annotation information with the annotation() function. This gives exon-level information. We just want to know the gene which each isoform belongs to, so we can remove duplicate rows belonging to the same isoform:
+```{r}
+gene.features <- annotation(genes(cuff))
+head(gene.features)
+isoforms.per.gene <-
+  gene.features[!duplicated(gene.features$isoform_id), c("gene_id", "isoform_id")]
+isoforms.per.gene <-
+  isoforms.per.gene[order(isoforms.per.gene$isoform_id), ]
+head(isoforms.per.gene)
+```
+
+A single call to table() gives us a vector, one value for each gene, and the number of isoforms per gene:
+```{r}
+gene.tab <- table(isoforms.per.gene$gene_id)
+table(gene.tab)
+```
+
+The fpkm() function returns a data.frame of the FPKM estimates for each isoform and sample:
+```{r}
+isoform.fpkm <- fpkm(isoforms(cuff))
+head(isoform.fpkm)[1:4, 1:4]
+table(isoform.fpkm$sample_name)
+```
+
+Extract out tables for the iPS and hESC samples:
+```{r}
+ips <- isoform.fpkm[isoform.fpkm$sample_name == "iPS", ]
+hesc <- isoform.fpkm[isoform.fpkm$sample_name == "hESC", ]
+```
+
+Now check that the isoform_id from our FPKM tables and our isoforms-per-gene table are identical:
+```{r}
+stopifnot(all(ips$isoform_id == isoforms.per.gene$isoform_id))
+stopifnot(all(hesc$isoform_id == isoforms.per.gene$isoform_id))
+```
+
+Identify, for each sample, the index of the isoform with the largest FPKM:
+```{r}
+ips.max <-
+  sapply(split(ips$fpkm, isoforms.per.gene$gene_id), which.max)
+head(ips.max)
+
+hesc.max <-
+  sapply(split(hesc$fpkm, isoforms.per.gene$gene_id), which.max)
+head(hesc.max)
+```
+
+Across all genes in our tables, how often is the highest expressed isoform the same one in iPS and hESC cells?
+```{r}
+mean(ips.max == hesc.max)
+```
+
+Subsetting to only the genes that have more than one isoform, how often is the highest expressed isoform the same one in iPS and hESC cells?
+```{r}
+ips.max = sapply(split(ips$fpkm, isoforms.per.gene$gene_id), which.max)
+hesc.max = sapply(split(hesc$fpkm, isoforms.per.gene$gene_id), which.max)
+mean((ips.max == hesc.max)[gene.tab > 1]) 
+```
 
 ```{bash  echo=FALSE}
 # Delete extra files

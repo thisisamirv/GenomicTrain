@@ -461,8 +461,7 @@ association(
 )
 ```
 
-Delete output files:
-```{bash}
+```{bash echo=FALSE}
 rm Output/tableSNPs.html
 ```
 
