@@ -427,6 +427,11 @@ rgset <- read.metharray(targets$Basename, verbose = TRUE)
 pData(rgset) <- as(targets, "DataFrame")
 ```
 
+How many cancer samples are included in this dataset?
+```{r}
+table(rgset$Status)
+```
+
 We now have the raw data, red and green intensities which we have access to:
 ```{r}
 getRed(rgset)[1:3, 1:3]
@@ -449,7 +454,17 @@ Now we are ready to obtain the methylation values and CpG locations:
 getBeta(mset,type="Illumina")[1:3, 1:3]
 
 # CpG locations
-granges(mset)[1:3]
+cpgloc <- granges(mset)
+cpgloc[1:3]
+```
+
+What is the estimated level of methylation for the CpG at location 153807318 on chr4 for sample "5775041068_R04C01"?
+```{r}
+i <-
+  which(seqnames(granges(mset)) == "chr4" &
+          start(granges(mset)) == 153807318)
+j <- which(rgset$Basename == file.path(path,"5775041068_R04C01"))
+getBeta(mset, type = "Illumina")[i, j]
 ```
 
 Add other data as well:
@@ -463,3 +478,41 @@ plotSex(mset)
 plot(as.matrix(getQC(mset)))
 ```
 
+Now let's convert *mset* to a *GenomicRatioSet* so we can read it into *bumphunter*:
+```{r}
+grset <- ratioConvert(mset, what = "beta", type = "Illumina")
+```
+
+Find DMRs between cancer and normal samples:
+```{r}
+X = model.matrix( ~ pData(rgset)$Status)
+dmrs <- bumphunter(grset, X, cutoff = 0.1)
+```
+
+Now we will learn how to run *bumphunter* with smoothing. However to make the code run faster we will only run it on chr22:
+```{r}
+# Subset
+index <- which(seqnames(grset) == "chr22")
+grset2 <- grset[index, ]
+
+# Run bumphunter without smoothing
+X <- model.matrix( ~ pData(rgset)$Status)
+res <- bumphunter(grset2, X, cutoff = 0.25)
+
+# Run bumphunter with smoothing
+res2 <- bumphunter(grset2, X, cutoff = 0.25, smooth = TRUE)
+```
+
+Notice that *res* has more DMRs and *res2* has longer DMRs:
+```{r}
+# Number of regions in res
+nrow(res$table)
+# Number of regions in res2
+nrow(res2$table)
+# Mean length of regions in res
+mean(res$table$L)
+# Mean length of regions in res2
+mean(res2$table$L)
+```
+
+# Data analysis and integration
