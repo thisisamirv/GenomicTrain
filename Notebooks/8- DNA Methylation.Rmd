@@ -515,4 +515,182 @@ mean(res$table$L)
 mean(res2$table$L)
 ```
 
-# Data analysis and integration
+# Inference for DNA methylation
+First, read in and preprocess data:
+```{r}
+library(minfi)
+library(IlluminaHumanMethylation450kmanifest)
+library(doParallel)
+library(pkgmaker)
+library(rafalib)
+
+path = "Data/tcgaMethylationSubset"
+targets = read.delim(file.path (path, "targets.txt"), as.is = TRUE)
+
+# Case-control groups
+table(targets$Tissue, targets$Status)
+
+# Subset the normal colon and lung
+index = which(targets$Status == "normal" &
+                targets$Tissue %in% c("colon", "lung"))
+targets = targets[index, ]
+
+# Read and preprocess methylation data
+dat = read.metharray.exp(base = path,
+                         targets = targets,
+                         verbose = TRUE)
+dat = preprocessIllumina(dat)
+dat = mapToGenome(dat)
+dat = ratioConvert(dat, type = "Illumina")
+
+# Check CpG data
+granges(dat)[1:4, ]
+
+# Get tissue data
+tissue = pData(dat)$Tissue
+
+# Parallelize the processing
+library(doParallel)
+detectCores()
+registerDoParallel(cores = 4)
+```
+
+Now, let's build a model for finding DMRs based on tissue type:
+```{r}
+X = model.matrix( ~ tissue)
+
+# For illustrative purposes let's restrict it to one chromosome only
+index = which(seqnames(dat) == "chr22")
+dat = dat[index, ]
+res = bumphunter(dat, X, cutoff = 0.1, B = 1000)
+
+# Check results
+## value = the average height of the region (bump)
+## L = the number of CpGs in the region
+res$tab[1:4, c(1, 2, 3, 4, 13)]
+
+# How many regions (bumps) were identified?
+dim(res$tab)[1]
+```
+
+Now, let's evaluate the relationship between these DMRs and CpG islands:
+```{r}
+library(rafalib)
+library(AnnotationHub)
+
+# Load CpG islands
+cgi = AnnotationHub(localHub = TRUE)[["AH5086"]]
+
+# Restrict results to those with a FWER < 0.05
+tab = res$tab[res$tab$fwer <= 0.05, ]
+
+# Convert to GRanges object
+tab = makeGRangesFromDataFrame(tab, keep.extra.columns = TRUE)
+
+# Compute the distance between the nearest CpG island to each DMR
+map = distanceToNearest(tab, cgi)
+d = mcols(map)$distance
+
+# Check the proportion of distances in categories of 0-1, 1-2000, etc.
+prop.table(table(cut(
+  as.numeric(d),
+  c(0, 1, 2000, 5000, Inf),
+  include.lowest = TRUE,
+  right = FALSE
+)))
+```
+
+As you can see, most of these DMRs are not within the islands, but are 2000 base pairs far from the islands. We call these regions "CpG island shores". CpGs that are nowhere near an island are called "open sea CpGs".
+
+Those results were for DMRs with a FWER < 0.05. Let's see the distances for all CpGs:
+```{r}
+nulltab =  granges(dat)
+nullmap = distanceToNearest(nulltab, cgi)
+nulld = mcols(nullmap)$distance
+prop.table(table(cut(
+  nulld,
+  c(0, 1, 2000, 5000, Inf),
+  include.lowest = TRUE,
+  right = FALSE
+)))
+```
+
+As expected, most CpGs are in the islands. So, the DMRs seem to be more common in the shores than the islands, in contrast to what we see for CpGs. We can also check these information using another function:
+```{r}
+# How many CpGs are within islands, shores, etc.?
+prop.table(table(getIslandStatus(dat)))
+```
+
+Now, let's plot one of those DMRs:
+```{r}
+# Sort DMRs by area
+tab = tab[order(-mcols(tab)$area)]
+
+# Add 3000 base pairs to each side
+tab = tab + 3000
+
+# Choose a specific DMR
+i = 17
+
+# Find all CpGs that are in the region
+dataIndex = which(granges(dat) %over% tab[i])
+cgiIndex = which(cgi %over% tab[i])
+thecgi = cgi[cgiIndex]
+
+# Get the positions of those CpGs
+pos = start(dat)[dataIndex]
+
+# Define the limit of the region to include in the plot
+xlim = range(c(pos, start(thecgi), end(thecgi)))
+
+# Get the beta values all CpGs
+beta = getBeta(dat)
+
+# Get the beta values for the CpGs in our specific region
+y = beta[dataIndex, ]
+
+# Color data points by tissue type
+cols = as.factor(pData(dat)$Tissue)
+
+# Plot
+mypar(1, 1)
+matplot(
+  pos,
+  y,
+  col = as.numeric(cols),
+  xlim = xlim,
+  ylim = c(0, 1),
+  xlab = "Genomic Location",
+  ylab = "Methylation",
+  pch = 1
+)
+legend(
+  x = "topright",
+  legend = c("Colon", "Lung"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+
+## Show CpG island
+apply(cbind(start(thecgi), end(thecgi)), 1, function(x) {
+  segments(x[1], 0, x[2], 0, lwd = 4, col = 3)
+})
+
+plot(
+  pos,
+  res$fitted[dataIndex],
+  xlim = xlim,
+  ylim = c(-0.4, 0.4),
+  xlab = "Genomic Location",
+  ylab = "Methylation Difference",
+  col = "blue"
+)
+abline(h = 0, lty = 2)
+
+## Show CpG island
+apply(cbind(start(thecgi), end(thecgi)), 1, function(x) {
+  segments(x[1], 0, x[2], 0, lwd = 4, col = 3)
+})
+```
+
