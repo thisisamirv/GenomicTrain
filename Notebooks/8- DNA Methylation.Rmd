@@ -1165,6 +1165,17 @@ The data consists of the following:
 2. M (Methylation) values, the number of reads supporting methylation covering each site
 3. Cov (Coverage) values, the total number of reads covering each site
 
+Unzip and prepare data:
+```{bash}
+tar -zxvf Data/colonCancerWGBS/SRR949210.chr22.1.tar.gz
+tar -zxvf Data/colonCancerWGBS/SRR949210.chr22.2.tar.gz
+mv SRR949210.chr22.1/* Output/
+mv SRR949210.chr22.2/* Output/
+rm -rf SRR949210.chr22.1
+rm -rf SRR949210.chr22.2
+rm Output/.DS_Store
+```
+
 Read data:
 ```{r}
 library(bsseq)
@@ -1172,22 +1183,6 @@ library(bsseq)
 targets <- DataFrame(targets, row.names = as.character(targets$Run))
 
 # Specify path to files in same order as targets table
-covfiles <-
-  file.path(
-    path,
-    c(
-      "SRR94921.chr22.1.cov",
-      "SRR94921.chr22.2.cov",
-      "SRR94921.chr22.3.cov",
-      "SRR94921.chr22.4.cov",
-      "SRR94921.chr22.5.cov",
-      "SRR94921.chr22.6.cov",
-      "SRR94921.chr22.7.cov",
-      "SRR94921.chr22.8.cov",
-      "SRR94921.chr22.9.cov",
-      "SRR94921.chr22.10.cov"
-    )
-  )
 
 # Read coverage files
 colonCancerWGBS <- read.bismark(files = covfiles,
