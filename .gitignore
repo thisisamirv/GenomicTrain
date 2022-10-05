@@ -2,3 +2,11 @@ Notebooks/Data/obesity.bed
 Notebooks/.ipynb_checkpoints/
 .ipynb_checkpoints/
 Notebooks/Output/*
+.DS_Store
+Notebooks/.DS_Store
+Notebooks/Data/.DS_Store
+Notebooks/Data/colonCancerWGBS/.DS_Store
+Notebooks/Data/tcgaMethylationSubset/.DS_Store
+Notebooks/Figures/.DS_Store
+Notebooks/Reference/.DS_Store
+Notebooks/.Rhistory
