@@ -1,0 +1,34 @@
+---
+title: "ChIP-seq"
+output: 
+  pdf_document: 
+    number_sections: yes
+    toc: yes
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+rm(list = ls())
+```
+
+# Introduction
+**Transcription regulation:** Transcription factors (TF) bind to chromatin in sequence-specific manner (TF binding motif) to regulate gene expression. Genes co-expressed in different conditions are likely under the control of the same TB.
+
+**ChIP-Seq:** A method used to analyze protein interactions with DNA. ChIP-seq combines chromatin immunoprecipitation (ChIP) with massively parallel DNA sequencing to identify genome-wide binding site (BS) of TFs. It is often conducted in millions of cells, where protein-DNA interactions are fixed, then chromatin is sheared into small pieces. Then a factor-specific antibody is used to pull down the factor as well as the DNA attached to it.
+
+![9-1](Figures/9-1.jpeg)
+
+# ChIP-seq preprocessing
+## Alignment
+For aligning sequence reads to the genome, one can use the following algorithms:
+
+* Bowtie and BWA: specifically useful for single-end seq data.
+* STAR: for paired-end read data.
+
+# ChIP-seq peak calling
+**ChIP-seq peak:** We call a ChIP-seq BS a ChIP-seq peak if the number of reads in the treatment sample are significantly different from that in the control samples.
+
+**MACS:** TF BSs are enriched in the ChIP protocol, and in sequencing the plus-strand reads will be mapped to the left of the precise binding location, while minus-strand reads will be mapped to the right of binding. ChIP fragments are often 100-300bp long, and sequencing only sequences the ends of the fragments. If plus-strand reads (to the left of binding) and minus-strand reads (to the right of the binding) are separated by 120bp, the precise binding site should be right in the middle of the two. So shifting reads by 60bp in 3' direction will find the precise binding location. Model-based analysis for ChIP-seq (MACS), is an algorithm that models the shift size of ChIP-Seq tags, and uses it to improve the spatial resolution of predicted BSs.
+
+![9-2](Figures/9-2.jpeg)
+
