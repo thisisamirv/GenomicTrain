@@ -299,9 +299,14 @@ PLINK format includes three files:
 * .bim: Contains SNPs annotations
 * .fam: Contains the subject’s information
 
+```{bash, echo=FALSE}
+cat Data/obesity1.bed Data/obesity2.bed Data/obesity3.bed Data/obesity4.bed \
+> Output/obesity.bed
+```
+
 ```{r}
 library(snpStats)
-snps <- read.plink(bed = "Data/obesity.bed",
+snps <- read.plink(bed = "Output/obesity.bed",
                    bim = "Data/obesity.bim",
                    fam = "Data/obesity.fam")
 geno <- snps$genotypes
@@ -731,3 +736,8 @@ library(grid)
 brpng = keggGet("hsa05212", "image")
 grid.raster(brpng)
 ```
+
+```{bash, echo=FALSE}
+rm Output/obesity.bed
+```
+

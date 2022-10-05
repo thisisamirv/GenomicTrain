@@ -47,10 +47,10 @@ countPattern("CG", s)
 ```{r}
 # Load the data in AnnotationHub package
 library(AnnotationHub)
-ah <- AnnotationHub()
+ah <- AnnotationHub(localHub = TRUE)
 
 # Subset to just the databases related to the hg19 genome
-ah <- subset(ah,ah$genome=="hg19")
+ah <- subset(ah, ah$genome == "hg19")
 
 # Retrieve the annotations for CpG Islands
 cgi <- ah[["AH5086"]]
@@ -176,7 +176,6 @@ pvals <- eb$p.value[, 2]
 library(qvalue)
 res <- qvalue(pvals)
 qvals <- res$qvalues
-plot(pvals, qvals)
 ```
 
 What proportion of CpG sites have q-values smaller than 0.05?
@@ -219,7 +218,7 @@ plot(pos[Index],
 )
 
 matplot(pos[Index],
-        meth[Index,],
+        meth[Index, ],
         col = cols,
         xlab = "Genomic Location",
         ylab = "Methylation",
@@ -353,7 +352,8 @@ res <- bumphunter(
   pos = pos,
   cluster = cl,
   cutoff = 0.1,
-  B = 0
+  B = 0,
+  verbose = FALSE
 )
 tab <- res$table
 tab[1:4, 1:4]
@@ -427,7 +427,7 @@ targets$Basename
 To make this script work in any working directory  we can edit that column to contain the absolute paths. Then we are ready to read in the raw data:
 ```{r}
 targets$Basename <- file.path(path, targets$Basename)
-rgset <- read.metharray(targets$Basename, verbose = TRUE)
+rgset <- read.metharray(targets$Basename, verbose = FALSE)
 pData(rgset) <- as(targets, "DataFrame")
 ```
 
@@ -455,7 +455,7 @@ mset <- mapToGenome(mset)
 Now we are ready to obtain the methylation values and CpG locations:
 ```{r}
 # Methylation values
-getBeta(mset,type="Illumina")[1:3, 1:3]
+getBeta(mset, type="Illumina")[1:3, 1:3]
 
 # CpG locations
 cpgloc <- granges(mset)
@@ -490,7 +490,7 @@ grset <- ratioConvert(mset, what = "beta", type = "Illumina")
 Find DMRs between cancer and normal samples:
 ```{r}
 X = model.matrix( ~ pData(rgset)$Status)
-dmrs <- bumphunter(grset, X, cutoff = 0.1)
+dmrs <- bumphunter(grset, X, cutoff = 0.1, verbose = FALSE)
 ```
 
 Now we will learn how to run *bumphunter* with smoothing. However to make the code run faster we will only run it on chr22:
@@ -501,10 +501,10 @@ grset2 <- grset[index, ]
 
 # Run bumphunter without smoothing
 X <- model.matrix( ~ pData(rgset)$Status)
-res <- bumphunter(grset2, X, cutoff = 0.25)
+res <- bumphunter(grset2, X, cutoff = 0.25, verbose = FALSE)
 
 # Run bumphunter with smoothing
-res2 <- bumphunter(grset2, X, cutoff = 0.25, smooth = TRUE)
+res2 <- bumphunter(grset2, X, cutoff = 0.25, smooth = TRUE, verbose = FALSE)
 ```
 
 Notice that *res* has more DMRs and *res2* has longer DMRs:
@@ -542,7 +542,7 @@ targets = targets[index, ]
 # Read and preprocess methylation data
 dat = read.metharray.exp(base = path,
                          targets = targets,
-                         verbose = TRUE)
+                         verbose = FALSE)
 dat = preprocessIllumina(dat)
 dat = mapToGenome(dat)
 dat = ratioConvert(dat, type = "Illumina")
@@ -566,7 +566,7 @@ X = model.matrix( ~ tissue)
 # For illustrative purposes let's restrict it to one chromosome only
 index = which(seqnames(dat) == "chr22")
 dat = dat[index, ]
-res = bumphunter(dat, X, cutoff = 0.1, B = 1000)
+res = bumphunter(dat, X, cutoff = 0.1, B = 1000, verbose = FALSE)
 
 # Check results
 ## value = the average height of the region (bump)
@@ -711,12 +711,12 @@ targets = read.delim(file.path (path, "targets.txt"), as.is = TRUE)
 index <-
   which(targets$Status == "normal" &
           targets$Tissue %in% c("colon", "breast"))
-targets <- targets[index,]
+targets <- targets[index, ]
 
 # Read in methylation data
 dat <- read.metharray.exp(base = path,
                           targets = targets,
-                          verbose = TRUE)
+                          verbose = FALSE)
 
 # Preprocess the data
 dat <- preprocessIllumina(dat)
@@ -773,7 +773,7 @@ fit = lmFit(y, X)
 
 Which CpG has the largest effect size?
 ```{r}
-index = which.max(abs( fit$coef[,2]))
+index = which.max(abs(fit$coef[, 2]))
 print(index)
 ```
 
@@ -965,11 +965,11 @@ dat2 <- dat[index, ]
 
 # Create design matrix
 tissue <- as.factor(pData(dat)$Tissue)
-X <- model.matrix(~ tissue)
+X <- model.matrix( ~ tissue)
 
 # Extract methylation values
 set.seed(1)
-res <- bumphunter(dat2, X, cutoff = 0.1, B = 100)
+res <- bumphunter(dat2, X, cutoff = 0.1, B = 100, verbose = FALSE)
 res$tab[1:4, c(1, 2, 3, 4, 9, 13)]
 ```
 
@@ -1039,7 +1039,7 @@ index <- which(targets$Tissue == "colon")
 targets <- targets[index, ]
 dat <- read.metharray.exp(base = path,
                           targets = targets,
-                          verbose = TRUE)
+                          verbose = FALSE)
 dat <- preprocessIllumina(dat)
 dat <- mapToGenome(dat)
 
@@ -1173,7 +1173,6 @@ mv SRR949210.chr22.1/* Output/
 mv SRR949210.chr22.2/* Output/
 rm -rf SRR949210.chr22.1
 rm -rf SRR949210.chr22.2
-rm Output/.DS_Store
 ```
 
 Read data:
@@ -1213,36 +1212,11 @@ index = apply(cov > 0, 1, all)
 mean(index)
 ```
 
-Let's compute the methylation values (across all samples) for each CpG site and plot it against location:
-```{r}
-pos = start(granges(colonCancerWGBS))
-col = as.numeric(as.factor(pData(colonCancerWGBS)$characteristics_ch1))
-meth = m / cov
-
-# Plot for methylation values
-matplot(pos,
-        meth,
-        col = col,
-        pch = 1,
-        cex = 0.5,
-        xlab = "Genomic Location",
-        ylab = "Methylation"
-)
-legend(
-  x = "topright",
-  legend = c("Cancer", "Normal"),
-  col = c(1, 2),
-  pch = 1,
-  cex = 0.8
-)
-```
-
 ```{bash, echo=FALSE}
 rm Output/SRR949210.chr22.cov Output/SRR949211.chr22.cov \
 Output/SRR949212.chr22.cov Output/SRR949213.chr22.cov \
 Output/SRR949214.chr22.cov Output/SRR949215.chr22.cov
 ```
-
 
 # Exercise - Epigenetic changes in peripheral blood in acute mania
 ## Paper
@@ -1265,7 +1239,7 @@ Now let's import the data:
 ```{r}
 # Import IDAT files into an RGChannelSet
 library(minfi)
-rg_68777 = read.metharray.exp("Data/GSE68777/idat")
+rg_68777 = read.metharray.exp("Data/GSE68777/idat", verbose = FALSE)
 ```
 
 Now let's get the phenotype data:
@@ -1309,7 +1283,10 @@ gzip Output/GSE68777_series_matrix.txt
 ```
 
 ```{r}
-geo <- getGEO(filename = "Output/GSE68777_series_matrix.txt.gz")
+library(GEOquery)
+library(stringr)
+geo <-
+  getGEO("GSE68777", filename = "Output/GSE68777_series_matrix.txt.gz", getGPL = FALSE)
 pdat = pData(geo)
 
 # Format rownames to match rg_68777 sample names
@@ -1334,9 +1311,268 @@ rm Output/GSE68777_series_matrix.txt.gz
 Let's check the data:
 ```{r}
 # Check the matrix of counts
-assay(rg_68777)[1:4, 1:3]
+assay(rg_68777)[1:4, 1:2]
 
 # Check pheno data
 pData(rg_68777)[1:4, ]
 ```
 
+## Dataset characteristics
+How many features are in *rg_68777*?
+```{r}
+length(rownames(rg_68777))
+```
+
+How many samples are in *rg_68777*?
+```{r}
+length(colnames(rg_68777))
+```
+
+How many samples are from patients in the Mania group?
+```{r}
+table(pData(rg_68777)[, 1])
+```
+
+How many samples from the Mania group are Male?
+```{r}
+table(pData(rg_68777)[, 1] == "Mania" & pData(rg_68777)[, 2] == "Male")
+```
+
+## Preprocessing
+Let's preprocess the data:
+```{r}
+rg_68777 = preprocessIllumina(rg_68777)
+```
+
+Now let's assign locations to each CpG:
+```{r}
+rg_68777 = mapToGenome(rg_68777)
+```
+
+Compute methylation values:
+```{r}
+rg_68777 = ratioConvert(rg_68777, type = "Illumina")
+```
+
+What is the class of rg_68777 after these processing steps?
+```{r}
+class(rg_68777)[1]
+```
+
+## Beta values
+Let's get the beta values for *rg_68777*:
+```{r}
+beta = getBeta(rg_68777)
+```
+
+What is the mean value of beta at "cg14008030" across all samples?
+```{r}
+mean(beta[which(rownames(beta) == "cg14008030", ), ])
+```
+
+## MDS plot
+Make an MDS plot of the matrix of beta values, coloring the points by group:
+```{r}
+mds <- cmdscale(dist(t(beta)))
+group <- as.factor(pData(rg_68777)[, 1])
+plot(mds, col = group)
+legend(
+  x = "topright",
+  legend = c("Control", "Mania"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+```
+
+Make an MDS plot of the matrix of beta values, coloring the points by gender:
+```{r}
+mds <- cmdscale(dist(t(beta)))
+gender <- as.factor(pData(rg_68777)[, 2])
+plot(mds, col = gender)
+legend(
+  x = "topright",
+  legend = c("Female", "Male"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+```
+
+As you can see, female samples are clustered together in the lower left. There is no apparent clustering by group.
+
+## limma effect sizes
+Let's perform a site-by-site (CpG-by-CpG) analysis for differentially methylated CpGs.
+
+Which group would be considered the reference group?
+```{r}
+levels(group)[1]
+```
+
+Now we do the analysis:
+```{r}
+library(limma)
+
+# Create design matrix
+group = as.factor(pData(rg_68777)[, 1])
+X = model.matrix( ~ group)
+
+# Obtain effect sizes and pvals with limma
+fit = lmFit(beta, X)
+```
+
+Which CpG site has the largest positive effect size for the group variable?
+```{r}
+index <- which.max(fit$coef[, 2])
+print(index)
+```
+
+On which chromosome is this CpG?
+```{r}
+seqnames(granges(rg_68777)[which(rownames(rg_68777) == names(index))])
+```
+
+In what position on that chromosome is this CpG?
+```{r}
+start(granges(rg_68777)[which(rownames(rg_68777) == names(index))])
+```
+
+What is the effect size of the group variable at that CpG?
+```{r}
+fit$coef[, 2][index]
+```
+
+## Boxplot of methylation levels at a specific CpG
+Make a boxplot of methylation values at the CpG site with the largest positive effect size, grouping by mania status:
+```{r}
+# Check if data order is correct
+table(rownames(pData(rg_68777)) == colnames(beta))
+
+# Specify groups
+group = as.factor(pData(rg_68777)[, 1])
+
+# Make boxplot
+boxplot(
+  beta[index,] ~ group,
+  xlab = "Group",
+  ylab = "Methylation",
+  names = c("Control", "Mania"),
+  boxwex = 0.4,
+  col = "red"
+)
+```
+
+As you can see, this CpG is more highly methylated in mania samples than in control samples, while control samples have more variable methylation status at this CpG than mania samples.
+
+## limma p-values and q-values
+Now let's calculate the p-values for individual CpGs:
+```{r}
+eb <- eBayes(fit)
+pvals <- eb$p.value[, 2]
+```
+
+Convert p-values to q-values:
+```{r}
+library(qvalue)
+qvals <- qvalue(pvals)$qvalues
+```
+
+How many CpGs genes have q-values smaller than 0.05?
+```{r}
+table(qvals < 0.05)[2]
+```
+
+## Comparing limma results to the publication
+Get the names of the CpGs with q-values below 0.05:
+```{r}
+cpg_q <- names(qvals[qvals < 0.05])
+```
+
+The original paper reported a single differentially methylated CpG on chromosome 15, but they did not adjust for multiple testing.
+
+How many of the CpGs with a q-value below 0.05 are on chromosome 15?
+```{r}
+chr = 1:length(cpg_q)
+for (i in 1:length(cpg_q)){
+  chr[i] = seqnames(granges(rg_68777)[which(rownames(rg_68777) == cpg_q[i])])
+}
+chr
+```
+
+## Number of nearby CpGs
+Find all the CpGs within 10000 basepairs of the location of the CpG site with the largest positive effect size:
+```{r}
+r = granges(rg_68777)[index] + 10000
+cpg_index = which(granges(rg_68777) %over% r)
+length(cpg_index)
+```
+
+## Plot of CpG methylation at surrounding CpGs
+Now create a plot showing the methylation values for all samples for the CpGs identified in previously and use color to distinguish mania from control:
+```{r}
+# Get the positions of those CpGs
+pos = start(granges(rg_68777))[cpg_index]
+
+# Define the limit of the region to include in the plot
+xlim = range(c(pos, start(r), end(r)))
+
+# Get the beta values for the CpGs in our specific region
+y = beta[cpg_index, ]
+
+# Color data points by tissue type
+cols = as.numeric(as.factor(pData(rg_68777)[, 1]))
+
+# Plot
+mypar(1, 1)
+matplot(
+  pos,
+  y,
+  col = as.numeric(cols),
+  xlim = xlim,
+  ylim = c(0, 1),
+  xlab = "Genomic Location",
+  ylab = "Methylation",
+  pch = 1
+)
+legend(
+  x = "topright",
+  legend = c("Control", "Mania"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+```
+
+As it is obvious, only the CpG with the highest effect size appears differentially methylated, with no apparent differential methylation within 10000 bp.
+
+## DMRs
+Now we are going to explicitly search for DMRs. We will use permutation to assess statistical significance. Because the function is slow, we will restrict our analysis to chromosome 17:
+```{r}
+# Set to chr 17
+index <- which(seqnames(rg_68777) == "chr17")
+chr17 <- rg_68777[index, ]
+
+# Create design matrix
+group <- as.factor(pData(rg_68777)[, 1])
+X <- model.matrix( ~ group)
+
+# Extract methylation values
+set.seed(1)
+res <- bumphunter(chr17, X, cutoff = 0.1, B = 100, verbose = FALSE)
+res$tab[1:4, c(1, 2, 3, 4, 9, 13)]
+```
+
+How many bumps (potential DMRs) were found on chromosome 17?
+```{r}
+dim(res$tab)[1]
+```
+
+How many DMRs on chromosome 17 have a p-value below 0.05?
+```{r}
+table(res$tab$p.value <= 0.05)[2]
+```
+
+How many DMRs on chromosome 17 have a family-wise error rate less than 0.1?
+```{r}
+table(res$tab$fwer <= 0.1)[2]
+```
