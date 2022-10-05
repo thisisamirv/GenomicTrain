@@ -195,7 +195,7 @@ Now let's determine which of the differentially methylated CpGs are in CpG islan
 ```{r}
 # Redefine CpG islands as cgi
 library(AnnotationHub)
-ah <- AnnotationHub()
+ah <- AnnotationHub(localHub = TRUE)
 cgi <- ah[["AH5086"]]
 index = which(qvals <= 0.05)
 table(gr[index] %over% cgi)[2] / length(gr[index])
@@ -270,7 +270,8 @@ plot(x1,
      xlab = "Genomic Location",
      ylab = "Methylation Difference",
      ylim = c(-1, 1),
-     col = "blue"
+     col = "blue",
+     type = "b"
 )
 abline(h = 0, lty = 2)
 ```
@@ -301,7 +302,8 @@ plot(x2,
      xlab = "Genomic Location",
      ylab = "Methylation Difference",
      ylim = c(-1, 1),
-     col = "blue"
+     col = "blue",
+     type = "b"
 )
 abline(h = 0, lty = 2)
 ```
@@ -333,7 +335,8 @@ plot(x2,
      xlab = "Genomic Location",
      ylab = "Methylation Difference",
      ylim = c(-1, 1),
-     col = "blue"
+     col = "blue",
+     type = "b"
 )
 abline(h = 0, lty = 2)
 lines(x2, lfit$fitted, col = 2)
@@ -382,7 +385,8 @@ plot(
   xlab = "Genomic Location",
   ylab = "Methylation Difference",
   ylim = c(-1, 1),
-  col = "blue"
+  col = "blue",
+  type = "b"
 )
 abline(h = 0, lty = 2)
 ```
@@ -684,7 +688,8 @@ plot(
   ylim = c(-0.4, 0.4),
   xlab = "Genomic Location",
   ylab = "Methylation Difference",
-  col = "blue"
+  col = "blue",
+  type = "b"
 )
 abline(h = 0, lty = 2)
 
@@ -869,8 +874,324 @@ plot(pos,
 plot(
   -log10(qvals[dataIndex]),
   col = "blue",
+  type = "b",
   ylab = "-log10(q-value)",
   xlab = "",
   xaxt = 'n'
 )
 ```
+
+A region of about 1000 base pairs appears to be different.
+
+Let's repeat the above code for the top 10 CpGs ranked by absolute value of the effect size:
+```{r}
+o <- order(abs(fit$coef[, 2]), decreasing = TRUE)[1:10]
+
+mypar(2, 2)
+
+# Plot of the methylation values
+## Get the positions of those CpGs
+pos = start(dat)[o]
+
+## Define the limit of the region to include in the plot
+xlim = range(min(pos), max(pos))
+
+## Get the beta values of those CpGs
+beta = getBeta(dat[o])
+
+## Color data points by tissue type
+cols = as.factor(pData(dat)$Tissue)
+
+## Plot
+matplot(
+  pos,
+  beta,
+  col = as.numeric(cols),
+  xlim = xlim,
+  ylim = c(0, 1),
+  xlab = "Genomic Location",
+  ylab = "Methylation",
+  pch = 1
+)
+legend(
+  x = "topright",
+  legend = c("Breast", "Colon"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+
+# Plot of the methylation difference
+plot(
+  pos,
+  eb$coefficients[o],
+  xlim = xlim,
+  ylim = c(-0.4, 0.4),
+  xlab = "Genomic Location",
+  ylab = "Methylation Difference",
+  col = "blue"
+)
+abline(h = 0, lty = 2)
+
+## Create a buffer zone for significancy
+abline(h = 0.1, lty = 3)
+abline(h = -0.1, lty = 3)
+
+# Plot of the estimated effect sizes
+plot(pos,
+     eb$coefficients[o, 2],
+     xlim = xlim,
+     xlab = "Genomic Location",
+     ylab = "Effect Size",
+     col = "blue")
+
+# Plot of the q-values
+plot(
+  -log10(qvals[o]),
+  type = "b",
+  col = "blue",
+  ylab = "-log10(q-value)",
+  xlab = "",
+  xaxt = 'n'
+)
+```
+
+For most plots we see groups of CpGs that are differentially methylated.
+
+Now we are going to explicitly search for DMRs. We will use permutation to assess statistical significance. Because the function is slow, we will restrict our analysis to chromosome 15:
+```{r}
+index <- which(seqnames(dat) == "chr15")
+dat2 <- dat[index, ]
+
+# Create design matrix
+tissue <- as.factor(pData(dat)$Tissue)
+X <- model.matrix(~ tissue)
+
+# Extract methylation values
+set.seed(1)
+res <- bumphunter(dat2, X, cutoff = 0.1, B = 100)
+res$tab[1:4, c(1, 2, 3, 4, 9, 13)]
+```
+
+How many regions achieve an FWER lower than 0.05?
+```{r}
+table(res$table$fwer < 0.05)[2]
+```
+
+Previously we performed a CpG by CpG analysis and obtained qvalues. Create an index for the CpGs that achieve qvalues smaller than 0.05 and a large effect size larger than 0.5 (in absolute value):
+```{r}
+index <-
+  which(qvals < 0.05 &
+          abs(fit$coef[, 2]) > 0.5 & seqnames(dat) == "chr15")
+```
+
+Now create a table of the DMRs returned by *bumphunter* that had 3 or more probes and convert the table into GRanges:
+```{r}
+tab <- res$tab[res$tab$L >= 3, ]
+tab <- makeGRangesFromDataFrame(tab)
+```
+
+What proportion of the CpGs indexed by "index" are inside regions found in "tab"?
+```{r}
+overlaps <- findOverlaps(tab, granges(dat[index]))
+length(overlaps) / length(index)
+```
+
+Now let's download the table of CpG islands using AnnotationHub:
+```{r}
+library(AnnotationHub)
+cgi <- AnnotationHub(localHub = TRUE)[["AH5086"]]
+```
+
+Create a GRanges object from the list of DMRs we computed previously:
+```{r}
+tab <- res$tab[res$tab$fwer <= 0.05, ]
+tab <- makeGRangesFromDataFrame(tab)
+```
+
+What proportion of the regions represented in "tab" do not overlap islands, but overall CpG islands shores (within 2000 basepairs) ?
+```{r}
+map = distanceToNearest(tab, cgi)
+d = mcols(map)$distance
+prop.table(table(cut(
+  d,
+  c(0, 1, 2000, 5000, Inf),
+  include.lowest = TRUE,
+  right = FALSE
+)))[2]
+```
+
+# Accounting for cell composition
+Most of the data we study comes from bulk of tissue which is usually a combination of cell types. Usually, different cell types have very different methylation profiles. In the figure below, you can see the methylation profiles for different cell types in the blood of 6 individuals.
+
+![8-2](Figures/8-2.jpeg)
+
+As you can see, the difference between individuals for each cell type is negligible, but the difference between cell types is substantial. This problem could be attacked as an batch effect.
+
+# Multi-resolution analysis
+Until now, we were analyzing data based on regions (resolution) of 10 to 20 kilobases long. Now, we are going to analyze data for bigger resolutions:
+```{r}
+# Import and preprocess data
+library(minfi)
+path = "Data/tcgaMethylationSubset"
+targets <- read.delim(file.path (path, "targets.txt"), as.is = TRUE)
+index <- which(targets$Tissue == "colon")
+targets <- targets[index, ]
+dat <- read.metharray.exp(base = path,
+                          targets = targets,
+                          verbose = TRUE)
+dat <- preprocessIllumina(dat)
+dat <- mapToGenome(dat)
+
+# Collapse CpG islands
+cdat <- cpgCollapse(dat, verbose = FALSE)
+```
+
+How many regions are represented in the collapsed object?
+```{r}
+length(cdat[[1]])
+```
+
+We can see the type of regions that are represented in this collapsed object:
+```{r}
+head(granges(cdat$obj))
+```
+
+What proportion of the regions are OpenSea regions?
+```{r}
+table(granges(cdat$obj)$type == "OpenSea")[2] / length(granges(cdat$obj))
+```
+
+Now let's find DMRs between cancer and normal:
+```{r}
+status <- factor(pData(cdat$obj)$Status, level = c("normal", "cancer"))
+X <- model.matrix( ~ status)
+res <- blockFinder(cdat$obj, X, cutoff = 0.05)
+
+# Take a peek at the blocks
+res$table[1:4, c(1, 2, 3, 4, 9)]
+```
+
+What proportion of the blocks reported in "res$table" are hypomethyated in cancer (lower methylation in cancer versus normal)?
+```{r}
+table(res$table$value < 0)[2] / length(res$table$value)
+```
+
+Let's make figures now:
+```{r}
+tab = makeGRangesFromDataFrame(res$table)
+index = granges(cdat$obj) %over% (tab[1] + 10000)
+pos = start(cdat$obj)[index]
+col = as.numeric(status)
+
+# Plot for methylation values
+matplot(pos,
+        getBeta(cdat$obj)[index, ],
+        col = col,
+        pch = 1,
+        cex = 0.5,
+        xlab = "Genomic Location",
+        ylab = "Methylation"
+)
+legend(
+  x = "topright",
+  legend = c("Normal", "Cancer"),
+  col = c(1, 2),
+  pch = 1,
+  cex = 0.8
+)
+
+# Plot for methylation difference
+plot(
+  pos,
+  res$fitted[index],
+  xlab = "Genomic Location",
+  ylab = "Methylation Difference",
+  col = "blue",
+  type = "b",
+  ylim = c(-0.2, 0.2)
+)
+abline(h = 0, lty = 2)
+
+## Create a buffer zone for significancy
+abline(h = 0.1, lty = 3)
+abline(h = -0.1, lty = 3)
+```
+
+# Whole genome bisulfite sequencing
+Reduced Representation Bisulfite Sequencing (RRBS) is an experimental technique widely used to manipulate the regions of the genome we measure. An enzyme is used to cut DNA at CCGG and the general idea is to filter out small or large molecules once DNA is cut. We can use Bioconductor tools to predict the size of these regions.
+
+Let's load the genome package and create an object with the sequence for chr22:
+```{r}
+library(BSgenome.Hsapiens.UCSC.hg19)
+chr22 <- Hsapiens[["chr22"]]
+```
+
+How many CCGG do we find on chr22?
+```{r}
+CCGG <- matchPattern("CCGG", chr22)
+length(CCGG)
+```
+
+Plot a histogram of the DNA fragment sizes after we cut at CCGG positions:
+```{r}
+size = diff(start(CCGG))
+hist(log10(size), main = "", xlab = "log10 of DNA fragment sizes")
+```
+
+A typical size to filter are DNA regions between 40 and 220 basepairs. What proportion of the fragments created for chr22 are between 40 and 220 basepairs?
+```{r}
+table(size < 220 & size > 40)[2] / length(size)
+```
+
+If we try to sequence all of chromosome 22, we would need to sequence 51,304,566 bases. If instead we only sequence fragments of sizes between 40 and 220 basepairs, how many bases would we need to sequence?
+```{r}
+sum(size[size <= 220 & size >= 40])
+```
+
+Whole-genome bisulfite sequencing (WGBS) is another sequencing-based protocol for measuring DNA methylation in samples. Now, we will take a look at WGBS data from a set of paired tumor and normal colon samples:
+```{r}
+path <- "Data/colonCancerWGBS"
+# Read in sample metadata table
+targets <-
+  read.table(file.path(path, "targets.txt"),
+             header = TRUE,
+             sep = "	")
+```
+
+The data consists of the following:
+
+1. genomic positions (chromosome and location) for methylation sites
+2. M (Methylation) values, the number of reads supporting methylation covering each site
+3. Cov (Coverage) values, the total number of reads covering each site
+
+Read data:
+```{r}
+library(bsseq)
+# Turn metadata into DataFrame w/ sample names as rownames
+targets <- DataFrame(targets, row.names = as.character(targets$Run))
+
+# Specify path to files in same order as targets table
+covfiles <-
+  file.path(
+    path,
+    c(
+      "SRR94921.chr22.1.cov",
+      "SRR94921.chr22.2.cov",
+      "SRR94921.chr22.3.cov",
+      "SRR94921.chr22.4.cov",
+      "SRR94921.chr22.5.cov",
+      "SRR94921.chr22.6.cov",
+      "SRR94921.chr22.7.cov",
+      "SRR94921.chr22.8.cov",
+      "SRR94921.chr22.9.cov",
+      "SRR94921.chr22.10.cov"
+    )
+  )
+
+# Read coverage files
+colonCancerWGBS <- read.bismark(files = covfiles,
+                                rmZeroCov = TRUE,
+                                colData = targets)
+```
+
