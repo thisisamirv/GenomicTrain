@@ -11,3 +11,5 @@ Most of the codes and data in this repo come from the following sources:
 3- Irizarry, R. A., & Love, M. I. (2016). Data analysis for the life sciences with R. Chapman and Hall/CRC.
 
 4- PH525x series by HarvardX.
+
+5- Broman, K. W., & Sen, S. (2009). A Guide to QTL Mapping with R/qtl (Vol. 46). New York: Springer.
