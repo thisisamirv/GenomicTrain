@@ -13,3 +13,5 @@ Most of the codes and data in this repo come from the following sources:
 4- PH525x series by HarvardX.
 
 5- Broman, K. W., & Sen, S. (2009). A Guide to QTL Mapping with R/qtl (Vol. 46). New York: Springer.
+
+6- Shi, X. M. (2020). eQTL Analysis. New York: Springer US.
