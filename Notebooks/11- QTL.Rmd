@@ -32,19 +32,19 @@ There are some different types of QTL:
 # Crosses
 **Backcross** is the simplest form of crossing where F1 individuals are crossed to one of the two parental strains. In a backcross to the A strain, one may detect a QTL only if the A allele is not dominant.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="11-1; Backcrossing", out.width = '90%'}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Backcrossing", out.width = '90%'}
 knitr::include_graphics("Figures/11-1.jpeg")
 ```
 
 **Intercross** is the most widely used form of crossing. The intercross allows the detection of QTL for which one allele is dominant. Moreover, the intercross allows one to estimate the degree of dominance at a QTL.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="11-2; Intercrossing", out.width = '90%'}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Intercrossing", out.width = '90%'}
 knitr::include_graphics("Figures/11-2.jpeg")
 ```
 
 **Recombinant inbred lines (RIL)** is another form beginning with an intercross, and then mating pairs of F2 siblings, followed by a parallel series of repeated sibling mating to construct a new panel of inbred lines whose genomes are a mosaic of the two initial lines. In RIL we can achieve better mapping resolution, but it is expensive.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="11-3; Recombinant inbred lines", out.width = '50%'}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Recombinant inbred lines", out.width = '50%'}
 knitr::include_graphics("Figures/11-3.jpeg")
 ```
 
@@ -536,3 +536,384 @@ hist(
 About 40 markers were typed on essentially everyone; over 100 were typed on only the 92 individuals with extreme phenotypes. The remaining 29 mark- ers were typed only on a few individuals.
 
 # Single-QTL analysis
+The most commonly used method for QTL analysis is interval mapping, in which one posits the presence of a single QTL and considers each point on a dense grid across the genome, one at a time, as the location of the putative QTL. But first, we describe an even simpler method, sometimes called marker regression.
+
+## Marker regression
+It consists of considering each marker individually, splitting the individuals into groups, according to their genotypes at the marker, and comparing the groups’ phenotype averages. Consider, for example, the *hyper* data. The blood pressure phenotype is plotted against the genotype at markers "D4Mit214" and "D12Mit20":
+```{r, fig.align='center', out.width = '100%'}
+library(qtl)
+data(hyper)
+par(mfrow = c(1, 2))
+plotPXG(hyper, "D4Mit214", ylab = "Blood Pressure")
+plotPXG(hyper, "D12Mit20", ylab = "Blood Pressure")
+```
+
+At "D4Mit214", the homozygous individuals exhibit a larger average phenotype than the heterozygotes, indicating that this marker is linked to a QTL.
+
+In a backcross, we test for linkage of a marker to a QTL by a t test; in an intercross, we would use analysis of variance (ANOVA), which gives an F statistic. Traditionally, evidence for linkage to a QTL is measured by a LOD score: the log10 likelihood ratio comparing the hypothesis that there is a QTL at the marker to the hypothesis that there is no QTL anywhere in the genome:
+```{r, fig.align='center', out.width = '80%'}
+# Fit of single-QTL models
+out.mr <- scanone(hyper, method = "mr")
+
+# Take a peak at the results
+out.mr[out.mr$chr == 12, ]
+
+# Show just those with a LOD > 3
+summary(out.mr, threshold = 3)
+
+# Plot of the LOD scores at chr 1, 4, and 12
+plot(out.mr, chr = c(1, 4, 12), ylab = "LOD score", col = "red")
+```
+
+The jagged appearance of the LOD curve for chromosome 4 is due to the pattern of missing marker genotype data.
+
+## Interval mapping
+Interval mapping improves on the marker regression method by taking account of missing genotype data at a putative QTL. In this section, we consider several variants on interval mapping.
+
+### Standard interval mapping
+Standard interval mapping uses maximum likelihood estimation under a mixture model. The most important disadvantage of interval mapping is that we are still considering only a single-QTL model, and so we have limited ability to separate linked QTL and no ability to assess possible interactions among QTL. Note that no two markers should be placed at precisely the same position. Marker positions may be moved apart slightly as follows:
+```{r}
+hyper <- jittermap(hyper)
+```
+
+Now to perform standard interval mapping:
+```{r, fig.align='center', out.width = '80%'}
+# Calculate the conditional genotype probabilities
+hyper <- calc.genoprob(hyper, step = 1, error.prob = 0.001)
+
+# Perform interval mapping
+out.em <- scanone(hyper, method = "em")
+
+# Plot the results and compare it with marker regression
+plot(
+  out.em,
+  out.mr,
+  chr = c(1, 4, 12),
+  col = c("blue", "red"),
+  ylab = "LOD score"
+)
+legend(
+  x = "topright",
+  legend = c("Standard interval mapping", "Marker regression"),
+  col = c("blue", "red"),
+  lty = 1,
+  cex = 0.8
+)
+```
+
+### Haley–Knott regression
+Haley–Knott regression provides a fast approximation of the results of standard interval mapping. Haley–Knott regression provides a fast approximation of the results of standard interval mapping:
+```{r, fig.align='center', out.width = '80%'}
+# Calculate the conditional genotype probabilities
+hyper <- calc.genoprob(hyper, step = 1, error.prob = 0.001)
+
+# Perform Haley–Knott regression
+out.hk <- scanone(hyper, method = "hk")
+
+# Plot the results and compare it with the previous ones
+plot(
+  out.em,
+  out.mr,
+  out.hk,
+  chr = c(1, 4, 12),
+  col = c("blue", "red", "green"),
+  ylab = "LOD score"
+)
+legend(
+  x = "topright",
+  legend = c(
+    "Standard interval mapping",
+    "Marker regression",
+    "Haley–Knott regression"
+  ),
+  col = c("blue", "red", "green"),
+  lty = 1,
+  cex = 0.8
+)
+```
+
+### Extended Haley–Knott regression
+The extended Haley–Knott method is not as fast as Haley–Knott regression, but it provides an improved approximation and is still somewhat faster than standard interval mapping. Most importantly, the extended Haley–Knott method is more robust than standard interval mapping:
+```{r, fig.align='center', out.width = '80%'}
+# Calculate the conditional genotype probabilities
+hyper <- calc.genoprob(hyper, step = 1, error.prob = 0.001)
+
+# Perform Haley–Knott regression
+out.ehk <- scanone(hyper, method = "ehk")
+
+# Plot the results and compare it with the previous ones
+plot(out.mr, chr = c(1, 4, 12), col = "red", ylab = "LOD score")
+plot(out.em, chr = c(1, 4, 12), col = "blue", add = TRUE)
+plot(out.hk, chr = c(1, 4, 12), col = "green", add = TRUE)
+plot(out.ehk, chr = c(1, 4, 12), col = "purple", add = TRUE)
+legend(
+  x = "topright",
+  legend = c(
+    "Marker regression",
+    "Standard interval mapping",
+    "Haley–Knott regression",
+    "Extended Haley–Knott regression"
+  ),
+  col = c("red", "blue", "green", "purple"),
+  lty = 1,
+  cex = 0.6
+)
+```
+
+### Multiple imputation
+The multiple imputation approach dispenses with the missing data problem by filling in all missing genotype data, even at sites between markers. For example, the following figure illustrates the imputation of a single backcross individual’s genotype data:
+```{r, echo=FALSE}
+set.seed(12201969 + 15)
+
+data(hyper)
+hyper <- subset(hyper, chr = 12, ind = 1:10)
+m <- c(0, 16, 22, 40, 56)
+names(m) <- names(hyper$geno[[1]]$map)
+hyper$geno[[1]]$map <- m
+marpos <- round(pull.map(hyper)[[1]])
+
+par(mar = rep(0.1, 4), bty = "n")
+plot(
+  0,
+  0,
+  type = "n",
+  xlab = "",
+  ylab = "",
+  xaxt = "n",
+  yaxt = "n",
+  xlim = c(6, 100),
+  ylim = c(3.5, 103.5),
+  xaxs = "i",
+  yaxs = "i"
+)
+xl <- c(30, 97)
+yp <- 93
+yd <- 1
+segments(xl[1], yp, xl[2], yp)
+
+L <- diff(range(marpos))
+otherpos <- seq(0, L, by = 2)
+otherpos <- otherpos[is.na(match(otherpos, marpos))]
+
+xotherpos <- otherpos * diff(xl) / L + xl[1]
+xmarpos <- marpos * diff(xl) / L + xl[1]
+segments(xmarpos, yp - yd * 2, xmarpos, yp + yd * 2)
+segments(xotherpos, yp - yd, xotherpos, yp + yd)
+text(xmarpos, yp + yd * 6, marpos)
+
+xd <- 4
+text(xl[1] - xd, yp, "Genetic map:", adj = c(1, 0.5))
+
+yp2 <- yp - yd * 8
+ind <- 9 # or 13, 14, 57, 58
+nmar <- length(marpos)
+nother <- length(otherpos)
+points(
+  xmarpos,
+  rep(yp2, nmar),
+  pch = 22,
+  cex = 1.5,
+  bg = c("red", "blue")[hyper$geno[[1]]$data[ind, ]],
+  col = "black"
+)
+points(xotherpos, rep(yp2, nother), pch = 0, cex = 1.5)
+
+text(xl[1] - xd, yp2, "Observed data:", adj = c(1, 0.5))
+
+hyper <- sim.geno(hyper, n.draws = 64, step = 2)
+hyper$geno[[1]]$draws <- hyper$geno[[1]]$draws[, , -(11:22)]
+xallpos <- sort(c(xmarpos, xotherpos))
+npos <- length(xallpos)
+yp3 <- yp2 - yd * 8
+text(xl[1] - xd, yp3, "Imputations:", adj = c(1, 0.5))
+i <- 1
+for (i in 1:15) {
+  points(
+    xallpos,
+    rep(yp3, npos),
+    pch = 22,
+    cex = 1.5,
+    bg = c("red", "blue")[hyper$geno[[1]]$draws[ind, , i]],
+    col = "black"
+  )
+  yp3 <- yp3 - yd * 5
+}
+
+yp4 <- yp2 - yd * 6 - yd * 3 * 5
+xp2 <- 12
+yd2 <- yd * 6
+points(
+  xp2,
+  yp4,
+  pch = 22,
+  cex = 1.5,
+  bg = "red",
+  col = "black"
+)
+text(xp2 + xd * 0.5, yp4, "= AA", adj = c(0, 0.5))
+
+points(
+  xp2,
+  yp4 - yd2,
+  pch = 22,
+  cex = 1.5,
+  bg = "blue",
+  col = "black"
+)
+text(xp2 + xd * 0.5, yp4 - yd2, "= AB", adj = c(0, 0.5))
+
+points(xp2, yp4 - 2 * yd2, pch = 0, cex = 1.5)
+text(xp2 + xd * 0.5, yp4 - 2 * yd2, "= missing", adj = c(0, 0.5))
+```
+
+The observed genotype data at five genetic markers is shown at the top, followed by the imputed genotypes for 15 different imputations. Note that the positions of the recombination events vary among the imputations, and a couple of imputations exhibit double-crossovers between markers.
+
+The multiple imputation approach has greatest value for the fit and exploration of multiple-QTL models:
+```{r}
+# Perform the imputations
+hyper <- sim.geno(hyper,
+                  step = 1,
+                  n.draws = 64,
+                  error.prob = 0.001)
+
+# Perform multiple imputation
+out.imp <- scanone(hyper, method = "imp")
+
+# Plot the results and compare it with the previous ones
+plot(out.mr, chr = c(1, 4, 12), col = "red", ylab = "LOD score")
+plot(out.em, chr = c(1, 4, 12), col = "blue", add = TRUE)
+plot(out.hk, chr = c(1, 4, 12), col = "green", add = TRUE)
+plot(out.ehk, chr = c(1, 4, 12), col = "purple", add = TRUE)
+plot(out.imp, chr = c(1, 4, 12), col = "black", add = TRUE)
+legend(
+  x = "topright",
+  legend = c(
+    "Marker regression",
+    "Standard interval mapping",
+    "Haley–Knott regression",
+    "Extended Haley–Knott regression",
+    "Multiple imputations"
+  ),
+  col = c("red", "blue", "green", "purple", "black"),
+  lty = 1,
+  cex = 0.6
+)
+```
+
+### Comparison of methods
+Relative advantages and disadvantages of the four interval mapping methods are shown below:
+
+| Method                      | Use of genotype information  | Robustness | Selective genotyping | Speed |
+| --------------------------- | ---------------------------- | ---------- | ---------- | ------ |
+| Standard interval mapping   | ++                           | -          | +         | -      |
+| Haley–Knott                 | -                            | +          | -         | +      |
+| Extended Haley–Knott        | +                            | +          | +         | -      |
+| Multiple imputation         | ++                           | +          | +         | --     |
+
+## Significance thresholds
+A LOD score indicates evidence for the presence of a QTL, with larger LOD scores corresponding to greater evidence. We compare our observed LOD scores to the distribution of the genome-wide maximum LOD score, in the case that there were no QTL anywhere. The 95th percentile of this distribution may be used as a genome-wide LOD threshold. One may derive this null distribution by permutation test. While we generally use 1000 permutation replicates initially, we may go up to 10,000 or even 100,000 replicates in order to achieve greater precision.
+Alternatively, one may calculate a genome-scan-adjusted p-value corresponding to an observed LOD score.
+
+Let us illustrate the permutation test:
+```{r}
+# Import data
+data(hyper)
+
+# Obtain the QTL genotype probabilities
+hyper <- calc.genoprob(hyper, step = 1, error.prob = 0.001)
+
+# Do the permutation test
+operm <- scanone(hyper, n.perm = 1000, verbose = FALSE)
+
+# Plot a histogram of the permutation results
+plot(operm, col = "blue", xlab = "Max of LOD score")
+
+# Obtain genome-wide LOD thresholds for significance levels 20% and 5%
+summary(operm, alpha = c(0.20, 0.05))
+```
+
+In the above, we used the traditional permutation test. However, for the *hyper* data, a selective genotyping strategy was used, and so it is best to use a stratified permutation test, permuting individuals’ phenotypes separately within strata defined by the extent of genotyping. We must first define a vector that indicates the strata. This may be done as follows. We place individuals who were genotyped at more than 100 markers in one group and the other individuals in a second group:
+```{r}
+strat <- (ntyped(hyper) > 100)
+```
+
+We then rerun the permutation test:
+```{r}
+# Do the permutation test
+operms <-
+  scanone(hyper,
+          n.perm = 1000,
+          perm.strata = strat,
+          verbose = FALSE)
+
+# Plot a histogram of the permutation results
+plot(operm, col = "blue", xlab = "Max of LOD score")
+
+# Obtain genome-wide LOD thresholds for significance levels 20% and 5%
+summary(operm, alpha = c(0.20, 0.05))
+```
+
+In this particular case, we see little difference in the significance threshold when using the stratified permutation test.
+
+Turning now to the use of the permutation results, we can pick out the LOD peaks (no more than one per chromosome) that meet the 10% significance level with the genome-scan-adjusted p-value for the results of single-QTL analysis using the following commands:
+```{r}
+summary(out.em, perms = operms, alpha = 0.1, pvalues = TRUE)
+```
+
+For the QTL on chromosome 4, our estimated p-value is 0. Citing a p-value of 0 doesn’t seem right, but we can get an upper confidence limit on the true p-value as follows:
+```{r}
+binom.test(0, 1000)$conf.int
+```
+
+Thus, we might report p < 0.004.
+
+## The X chromosome
+The X chromosome exhibits special behavior and must be treated differently from the autosomes in QTL mapping.
+
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="The behavior of the X chromosome in a backcross. Circles and squares correspond to females and males, respectively. The small bar is the Y chromosome.", out.width = '40%'}
+knitr::include_graphics("Figures/11-4.jpeg")
+```
+
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="The behavior of the X chromosome in a intercross Circles and squares correspond to females and males, respectively. The small bar is the Y chromosome.", out.width = '40%'}
+knitr::include_graphics("Figures/11-5.jpeg")
+```
+
+If not taken into account, such systematic differences can lead to large LOD scores on the X chromosome even in the absence of X chromosome linkage. Finally, to account for the fact that the number of degrees of freedom for the linkage test on the X chromosome may be different from that on the autosomes, an X-chromosome-specific significance threshold is required.
+
+### Analysis
+For all interval mapping methods, the actual analysis is essentially the same for the X chromosome as for the autosomes. As each backcross or intercross individual has a single X chromosome that was subject to recombination,the calculation of the genotype probabilities given the available multipoint marker genotype data is identical to those for an autosome in a backcross, and so nothing new is needed there.
+
+### Significance thresholds
+We use a constant LOD threshold across the autosomes and a separate threshold for the X chromosome. The precise estimation of the X-chromosome-specific LOD threshold will require considerably more permutation replicates.
+
+### Example
+As an example, we consider the data of Grant et al. (2006), which concerns the basal iron levels in the liver and spleen of intercross mice. Both sexes from reciprocal intercrosses with the "C57BL/6J/Ola" and "SWR/Ola" strains were used; there are 284 individuals in total. There are two phenotypes: the level of iron (in μg/g) in the liver and spleen. There are approximately equal proportions of males and females and of mice from each cross direction:
+```{r}
+# Import data
+library(qtlbook)
+data(iron)
+
+# Plot histograms of the liver and spleen phenotypes
+plot(iron, pheno = 1:2)
+
+# The pattern of missing genotype data
+plotMissing(listeria)
+
+# The genetic map of the typed markers
+plot.map(listeria)
+
+# A histogram of the phenotype
+plotPheno(listeria, 1, xlab = "", main = "Survival time (hr)")
+
+# A bar plot of the sexes
+plotPheno(
+  listeria,
+  2,
+  xlab = "",
+  main = "Sex",
+  col = "blue",
+  space = 1.5,
+  names.arg = c("Female", "Male")
+)
+```
+
