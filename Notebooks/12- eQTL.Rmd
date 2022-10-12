@@ -111,10 +111,73 @@ Data/exampleData/exampleData25.vcf.gz Data/exampleData/exampleData26.vcf.gz \
 
 ```{r}
 library(GenomicTools)
-genotypes <- importVCF("Output/exampleData.vcf.gz", na.rm.seq = ".")
+
+# Import geno data
+genotypes <- importVCF("Output/exampleData.vcf.gz", na.seq = ".")
+
+# Import gene expression data
+expValues <-
+  read.table("Data/exampleData/exampleData.csv",
+             header = TRUE,
+             sep = " ")
+
+# Import pheno data
+phenotypes <-
+  read.table("Data/exampleData/examplePheno.csv",
+             header = TRUE,
+             sep = "\t")
 ```
 
 ```{bash, ehco=FALSE}
 rm Output/exampleData.vcf.gz
+```
+
+Let's check our data:
+```{r}
+genotypes$genotypes[1:2, 1:2]
+genotypes$map[1:2, ]
+expValues[1:2, 1:2]
+phenotypes[, 1:2]
+```
+
+The eQTL analysis requires the gene locations of the genes of interest. As the example data contains the Ensembl gene IDs, we also import the Ensembl annotation:
+```{bash, ehco=FALSE}
+gunzip -c Reference/Homo_sapiens.GRCh38.107.1.gtf.gz > \
+Output/Homo_sapiens.GRCh38.107.1.gtf
+gunzip -c Reference/Homo_sapiens.GRCh38.107.2.gtf.gz > \
+Output/Homo_sapiens.GRCh38.107.2.gtf
+gunzip -c Reference/Homo_sapiens.GRCh38.107.3.gtf.gz > \
+Output/Homo_sapiens.GRCh38.107.3.gtf
+
+cat Output/Homo_sapiens.GRCh38.107.1.gtf \
+Output/Homo_sapiens.GRCh38.107.2.gtf \
+Output/Homo_sapiens.GRCh38.107.3.gtf \
+> Output/Homo_sapiens.GRCh38.107.gtf
+
+rm Output/Homo_sapiens.GRCh38.107.1.gtf
+rm Output/Homo_sapiens.GRCh38.107.2.gtf
+rm Output/Homo_sapiens.GRCh38.107.3.gtf
+```
+
+```{r}
+annotation <-
+  importGTF("Output/Homo_sapiens.GRCh38.107.gtf", level = "gene")
+```
+
+```{bash, ehco=FALSE}
+rm Output/Homo_sapiens.GRCh38.107.gtf
+```
+
+## Running a QTL Analysis
+Now we perform the QTL:
+```{r}
+phenoQTL <-
+  QTL(
+    pheno = t(phenotypes[2, ]),
+    geno = genotypes,
+    mc = 4,
+    method = "directional",
+    testType = "asymptotic"
+  )
 ```
 
