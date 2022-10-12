@@ -114,3 +114,7 @@ library(GenomicTools)
 genotypes <- importVCF("Output/exampleData.vcf.gz", na.rm.seq = ".")
 ```
 
+```{bash, ehco=FALSE}
+rm Output/exampleData.vcf.gz
+```
+
