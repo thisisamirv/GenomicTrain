@@ -113,7 +113,8 @@ Data/exampleData/exampleData25.vcf.gz Data/exampleData/exampleData26.vcf.gz \
 library(GenomicTools)
 
 # Import geno data
-genotypes <- importVCF("Output/exampleData.vcf.gz", na.seq = ".")
+genotypes <- importVCF("/Users/amirvalizadeh/Downloads/exampleData.vcf",
+                       na.seq = ".")
 
 # Import gene expression data
 expValues <-
@@ -175,8 +176,9 @@ phenoQTL <-
   QTL(
     pheno = t(phenotypes[2, ]),
     geno = genotypes,
-    mc = 4,
     method = "directional",
+    mc = 4,
+    sig = 0.1,
     testType = "asymptotic"
   )
 ```
