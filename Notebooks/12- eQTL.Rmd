@@ -92,8 +92,25 @@ Here, the familiar candidates like the FDR/Benjamini–Hochberg or the Bonferron
 
 ## Preparations for the QTL and eQTL Analyses
 Let's import data first:
+```{bash, ehco=FALSE}
+cat Data/exampleData/exampleData1.vcf.gz Data/exampleData/exampleData2.vcf.gz \
+Data/exampleData/exampleData3.vcf.gz Data/exampleData/exampleData4.vcf.gz \
+Data/exampleData/exampleData5.vcf.gz Data/exampleData/exampleData6.vcf.gz \
+Data/exampleData/exampleData7.vcf.gz Data/exampleData/exampleData8.vcf.gz \
+Data/exampleData/exampleData9.vcf.gz Data/exampleData/exampleData10.vcf.gz \
+Data/exampleData/exampleData11.vcf.gz Data/exampleData/exampleData12.vcf.gz \
+Data/exampleData/exampleData13.vcf.gz Data/exampleData/exampleData14.vcf.gz \
+Data/exampleData/exampleData15.vcf.gz Data/exampleData/exampleData16.vcf.gz \
+Data/exampleData/exampleData17.vcf.gz Data/exampleData/exampleData18.vcf.gz \
+Data/exampleData/exampleData19.vcf.gz Data/exampleData/exampleData20.vcf.gz \
+Data/exampleData/exampleData21.vcf.gz Data/exampleData/exampleData22.vcf.gz \
+Data/exampleData/exampleData23.vcf.gz Data/exampleData/exampleData24.vcf.gz \
+Data/exampleData/exampleData25.vcf.gz Data/exampleData/exampleData26.vcf.gz \
+> Output/exampleData.vcf.gz
+```
+
 ```{r}
 library(GenomicTools)
-genotypes <- importVCF("Data/exampleData.vcf.gz", na.rm.seq = ".")
+genotypes <- importVCF("Output/exampleData.vcf.gz", na.rm.seq = ".")
 ```
 
