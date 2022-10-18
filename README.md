@@ -15,3 +15,4 @@ Most of the codes and data in this repo come from the following sources:
 5- Broman, K. W., & Sen, S. (2009). A Guide to QTL Mapping with R/qtl (Vol. 46). New York: Springer.
 
 6- Shi, X. M. (2020). eQTL Analysis. New York: Springer US.
+7- Cliff, A., Romero, J., Kainer, D., Walker, A., Furches, A., & Jacobson, D. (2019). A high-performance computing implementation of iterative random forest for the creation of predictive expression networks. Genes, 10(12), 996.
