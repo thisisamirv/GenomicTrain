@@ -16,3 +16,5 @@ Most of the codes and data in this repo come from the following sources:
 
 6- Shi, X. M. (2020). eQTL Analysis. New York: Springer US.
 7- Cliff, A., Romero, J., Kainer, D., Walker, A., Furches, A., & Jacobson, D. (2019). A high-performance computing implementation of iterative random forest for the creation of predictive expression networks. Genes, 10(12), 996.
+8- Rausch, T., Hsi-Yang Fritz, M., Korbel, J. O., & Benes, V. (2019). Alfred: interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long-and short-read sequencing. Bioinformatics, 35(14), 2489-2491.
+9- Erarslan‐Uysal, B., Kunz, J. B., Rausch, T., Richter‐Pechańska, P., van Belzen, I. A., Frismantas, V., ... & Kulozik, A. E. (2020). Chromatin accessibility landscape of pediatric T‐lymphoblastic leukemia and human T‐cell precursors. EMBO molecular medicine, 12(9), e12104.
