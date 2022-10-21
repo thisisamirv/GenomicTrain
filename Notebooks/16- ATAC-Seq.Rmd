@@ -79,7 +79,7 @@ library(pheatmap)
 # Import data
 Let’s load the count matrix and the sample information with the blood type and donor:
 ```{r}
-df = read.table("Output/atac.data.gz", header = T)
+df = read.table("Output/atac.data.gz", skip = 1, header = F, sep = "\t", col.names = c("Chr", "Start", "End", "Bcell-13A", "Bcell-13B", "CD4-9A", "CD4-9B", "CD8-10A", "CD8-10B", "Erythroblast-15A", "Erythroblast-15B", "Erythroblast-15C", "NK-11A", "NK-11B"))
 si = read.table("Output/blood.samples", header = F)
 colnames(si) = c("sample", "celltype", "donor")
 rownames(si) = si$sample
