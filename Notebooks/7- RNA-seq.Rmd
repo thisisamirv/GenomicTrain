@@ -4,6 +4,12 @@ output:
   pdf_document: 
     number_sections: yes
     toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
@@ -11,7 +17,9 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
 
-**Note:** RNA-seq is the platform of choice for expression studies due to its next generation high-throughput sequencing capabilities.
+\newpage
+
+RNA-Seq (named as an abbreviation of RNA sequencing) is a sequencing technique which uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample. It facilitates the ability to look at alternative gene spliced transcripts, post-transcriptional modifications, gene fusion, SNPs and changes in gene expression over time, or differences in gene expression in different groups or treatments.
 
 # Experimental design
 
@@ -19,12 +27,22 @@ rm(list = ls())
 * Biological replicates: have at least eight samples per treatment arm.
 * Do not to confuse pseudo-replicates (different samples from the same individual) and technical replicates with true biological replicates.
 
+# Scenarios
+
+**S1:** It is just one sample.
+
+**S2:** In this scenario, we will focus on comparing the expression levels of genes across 8 samples from the airway package, by counting the number of reads which overlap the exons of genes defined by a known annotation. This analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. The reads in this scenario have already been preprocessed.
+
+**S3:** This scenario contains RNA-seq fragments from a single sample on a single chromosome of the Drosophila genome.
+
+**S4:** This is an analysis of 22 RNA-seq samples of different human tissues.
+
+**S5**: This data has 20 samples (10 controls × 10treatments) from 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
+
 # Import data
-### Scenario 1
-RNA-Seq (named as an abbreviation of RNA sequencing) is a sequencing technique which uses next-generation sequencing (NGS) to reveal the presence and quantity of RNA in a biological sample. It facilitates the ability to look at alternative gene spliced transcripts, post-transcriptional modifications, gene fusion, SNPs and changes in gene expression over time, or differences in gene expression in different groups or treatments.
 
 ```{r}
-# Import data
+# S1
 library(ShortRead)
 seq = readFastq("Data/RNAseq.fastq.gz")
 
@@ -35,10 +53,8 @@ sread(seq)[1:2]
 quality(seq)[1:2]
 ```
 
-### Scenario 2
-In this scenario, we will focus on comparing the expression levels of genes across 8 samples from the airway package, by counting the number of reads which overlap the exons of genes defined by a known annotation. This analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. The reads in this scenario have already been preprocessed.
 ```{r}
-# Load data
+# S2
 library(airway)
 dir <- system.file("extdata", package = "airway", mustWork = TRUE)
 csv.file <- file.path(dir, "sample_table.csv")
@@ -47,19 +63,17 @@ bam.files <- file.path(dir, paste0(sample.table$Run, "_subset.bam"))
 gtf.file <- file.path(dir, "Homo_sapiens.GRCh37.75_subset.gtf")
 
 # Sample table
-sample.table
+sample.table[, c(2, 3, 6)]
 ```
 
-### Scenario 3
-This scenario contains RNA-seq fragments from a single sample on a single chromosome of the Drosophila genome.
 ```{r}
+# S3
 library(pasillaBamSubset)
 bam.file <- untreated3_chr4()
 ```
 
-### Scenario 4
-This is an analysis of 22 RNA-seq samples of different human tissues.
 ```{r}
+# S4
 load("Data/wang_eset.RData")
 
 # Take a peak
@@ -68,19 +82,32 @@ load("Data/wang_eset.RData")
 exprs(wang.eset)[1:5, 1:3]
 ```
 
+```{r}
+# S5
+library(edgeR)
+counts = read.table("Data/RNAdat.txt", header = T, sep = "\t")
+contrast = read.table("Data/RNAcontrast.txt", header = T, sep = "\t")
+
+
+# Create a container to assign group classes to the respective samples
+DGE = DGEList(counts, group = contrast$contrast)
+```
+
 # Quality control (QC)
-**S1: **
+**S1:**
 <br>
 
 For RNA-seq data, **fastQC** is a popular non-R program for QC.
 ```{bash}
 # S1
-fastqc --noextract Data/RNAseq.fastq.gz --outdir Output/
+fastqc --noextract Data/RNAseq.fastq.gz --quiet --outdir Output/
 ```
 
 The output looks like this:
 
-![7-1](Figures/7-1.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/7-1.jpeg")
+```
 
 A similar job can be done in R with **ShortRead** package.
 ```{r}
@@ -93,7 +120,9 @@ report(seqQC, dest = "Output/QCreport")
 
 The "quality score per cycle" graph looks like this:
 
-![7-2](Figures/7-2.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
+knitr::include_graphics("Figures/7-2.jpeg")
+```
 
 ```{bash echo=FALSE}
 rm -rf Output/QCreport
@@ -103,7 +132,7 @@ Notice how quality starts to drop after around 80 bp. In this case we might want
 
 # Preprocessing
 ## Filter reads
-**S1: **
+**S1**
 <br>
 
 Steps required include:
@@ -122,24 +151,25 @@ LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50 HEADCROP:10 CROP:80
 
 Notice that:
 
-* **SE** means single end reads, for paired-end data use **PE**.
-* **phred** is the quality scoring scheme.
-* **ILLUMINACLIP** points to the file with the adapters.
-* **LEADING** and **TRAILING** remove bases at the beginning and end of the reads below a score of 3.
-* **SLIDINGWINDOW** slides across the sequence and removes those inside a window of length 4 that have an average quality below 15.
-* **MINLEN** removes sequences that are shorter than 50 after filtering.
-* **HEADCROP** removes the first 10 sequences at the start of the run.
-* **CROP** deletes everything after the first 80 bases (recall the quality was not so good after 80 cycles).
+* *SE* means single end reads, for paired-end data use *PE*.
+* *phred* is the quality scoring scheme.
+* *ILLUMINACLIP* points to the file with the adapters.
+* *LEADING* and *TRAILING* remove bases at the beginning and end of the reads below a score of 3.
+* *SLIDINGWINDOW* slides across the sequence and removes those inside a window of length 4 that have an average quality below 15.
+* *MINLEN* removes sequences that are shorter than 50 after filtering.
+* *HEADCROP* removes the first 10 sequences at the start of the run.
+* *CROP* deletes everything after the first 80 bases (recall the quality was not so good after 80 cycles).
 
 Now, let's run QC again:
 
 ```{bash}
-fastqc --noextract Output/trimmedRNA.fastq --outdir Output/
+fastqc --noextract Output/trimmedRNA.fastq --quiet --outdir Output/
 ```
 
 The output looks like this:
-
-![7-3](Figures/7-3.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/7-3.jpeg")
+```
 
 ```{r}
 # QC
@@ -151,7 +181,9 @@ report(seqQC, dest = "Output/QCreport_2")
 
 The "quality score per cycle" graph looks like this now:
 
-![7-4](Figures/7-4.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
+knitr::include_graphics("Figures/7-4.jpeg")
+```
 
 Things look better now.
 
@@ -163,7 +195,7 @@ rm Output/trimmedRNA_fastqc.html
 ```
 
 ## Align against reference genome
-**S1: **
+**S1**
 <br>
 
 Now we have to align the data against a reference genome. **bowtie2** is a good software for this. For this purpose, first download the reference genome (index) from [bowtie2 website](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) or [Illumina website](http://support.illumina.com/sequencing/sequencing_software/igenome.html) and then run the following codes:
@@ -178,10 +210,10 @@ The aligned data is in SAM format. The last step is to convert the SAM file into
 # samtools index Output/sortedAlignedRNA.bam
 ```
 
-The output should be **sortedAlignedRNA.bam** and the index has the same name with extension **.bai**. Finally, to concatenate data from a sample that is spread across two or more SAM/BAM files, use the **merge** command from samtools.
+The output should be **sortedAlignedRNA.bam** and the index has the same name with extension **.bai**. Finally, to concatenate data from a sample that is spread across two or more SAM/BAM files, use the **merge** command from *samtools*.
 
 ## Match sequence reads to functional annotations
-**S1: **
+**S1**
 <br>
 
 ```{r}
@@ -189,8 +221,7 @@ library(GenomicFeatures)
 library(GenomicAlignments)
 library(biomaRt)
 txdb = makeTxDbFromBiomart(biomart = "ENSEMBL_MART_ENSEMBL",
-                           dataset = 'btaurus_gene_ensembl',
-                           host = "https://asia.ensembl.org")
+                           dataset = 'btaurus_gene_ensembl')
 txGene = transcriptsBy(txdb, 'gene')
 
 # Read in the preprocessed BAM file
@@ -206,7 +237,7 @@ reads[1]
 ```
 
 <br>
-**S2: **
+**S2**
 <br>
 
 ```{r}
@@ -228,7 +259,7 @@ for (i in 1:3) {
 ```
 
 <br>
-**S3: **
+**S3**
 <br>
 
 ```{r}
@@ -254,7 +285,7 @@ ebg.sub <- ebg[chr4.idx]
 ```
 
 ## Create count matrix
-**S1: **
+**S1**
 <br>
 
 ```{r}
@@ -264,19 +295,6 @@ counts = countOverlaps(txGene, reads)
 
 # Take a peak
 counts[1:4]
-```
-
-Let's plot gene counts:
-```{r}
-plot(
-  sort(counts),
-  col = "blue",
-  pch = 20,
-  main = "Sorted RNA-seq counts",
-  xlab = "Genes",
-  ylab = "Counts",
-  cex.main = 0.9
-)
 ```
 
 How many genes are known?
@@ -300,7 +318,7 @@ sum(counts[which(counts >= 200)]) / sum(counts) * 100
 ```
 
 <br>
-**S2: **
+**S2**
 <br>
 
 The following code creates a *SummarizedExperiment* containing the counts for the reads in each BAM file (columns) for each gene in `exons.by.gene` (the rows). We add the `sample.table` as column data. Remember, we know the order is correct, because the `bam.list` was constructed from a column of `sample.table`.
@@ -327,7 +345,7 @@ assay(se)[1:4, 1:3]
 ```
 
 <br>
-**S3: **
+**S3**
 <br>
 
 ```{r}
@@ -354,7 +372,7 @@ assay(se_2)[1:2, 1]
 ```
 
 <br>
-**S4: **
+**S4**
 <br>
 
 Let's take a subset of the count matrix and the column data:
@@ -364,7 +382,7 @@ col.data_4 <- pData(wang.eset)[10:21, ]
 ```
 
 ## Visualizing sample-sample distances
-**S2: **
+**S2**
 <br>
 
 Let's create a plot of count genes on the un-transformed scale:
@@ -392,7 +410,7 @@ plot(assay(airway)[, 1:2], cex = .1)
 Note that, on the un-transformed scale, the high count genes have high variance. We will explore different scaling and transformations options below.
 
 ## Normalization for sequencing depth
-**S2: **
+**S2**
 <br>
 
 *Remember: * Sequencing depth refers to the number of reads that are sequenced. At a higher cost, a higher depth can be obtained which improves statistical power. Note that adding more depth after 10M reads does not greatly increase power.
@@ -440,14 +458,14 @@ boxplot(log.norm.counts[rs > 0, ])
 ```
 
 Compare the log normalized counts vs gene counts on the un-transformed scale:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 mypar(2, 1)
 plot(assay(airway)[, 1:2], cex = .1)
 plot(assay(log.norm)[, 1:2], cex = .1)
 ```
 
 <br>
-**S4: **
+**S4**
 <br>
 
 Now to account for sequence depth variability, first, we need to convert the *SummarizedExperiment* object to a *DESeqDataSet* object.
@@ -467,12 +485,23 @@ What tissue has the highest size factor?
 dds_4$cell.type[which.max(sizeFactors(dds_4))]
 ```
 
+<br>
+**S5**
+<br>
+
+Estimate the normalization and dispersion factors:
+```{r}
+DGE = calcNormFactors(DGE)
+DGE = estimateCommonDisp(DGE)
+DGE = estimateTagwiseDisp(DGE)
+```
+
 ## Stabilizing count variance
-**S2: **
+**S2**
 <br>
 
 Now we will use a more sophisticated transformation. It uses the variance model for count data to shrink together the log-transformed counts for genes with very low counts.
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 rld <- rlog(dds)
 
 # Compare with the previous counts
@@ -483,7 +512,7 @@ plot(assay(rld)[, 1:2], cex = .1)
 ```
 
 Let's examine the difference between log normalized counts and rlog transformations:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
 library(vsn)
 
 # Log norm counts
@@ -494,7 +523,7 @@ meanSdPlot(assay(rld), ranks = FALSE, ylim = c(0, 3), main = "rlog")
 ```
 
 The principal components (PCA) plot is a useful diagnostic for examining relationships between samples:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
 mypar()
 rv <- apply(log.norm.counts, 1, var)
 topgenes <- head(order(rv, decreasing = TRUE), 500)
@@ -508,11 +537,11 @@ plot(pc$x[, 1],
 ```
 
 <br>
-**S4: **
+**S4**
 <br>
 
 To stabilize count variance:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
 rld_4 <- rlog(dds_4)
 
 ## OR
@@ -522,7 +551,7 @@ plot(assay(vsd)[, 1:2], cex = .1)
 ```
 
 The principal components (PCA) plot:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
 mypar()
 plotPCA(vsd, intgroup = "cell.type")
 ```
@@ -583,65 +612,6 @@ There are some approaches for RNA-seq analysis:
 
 Now let's perform gene expression quantification.
 
-## Senario 1
-In our RNA-seq data for S1, we only had one sample. Instead, we will import another data with 20 samples (10 controls × 10treatments) using the same 4492 genes. We also import a second file that matches samples to treatment groups and is useful to build design matrices and contrasts.
-```{r}
-library(edgeR)
-counts = read.table("Data/RNAdat.txt", header = T, sep = "\t")
-contrast = read.table("Data/RNAcontrast.txt", header = T, sep = "\t")
-
-
-# Create a container to assign group classes to the respective samples
-DGE = DGEList(counts, group = contrast$contrast)
-
-# Estimate the normalization and dispersion factors
-DGE = calcNormFactors(DGE)
-DGE = estimateCommonDisp(DGE)
-DGE = estimateTagwiseDisp(DGE)
-```
-
-Now let's perform a simple contrast between the two groups:
-```{r}
-difexpEx = exactTest(DGE, pair = c("ctrl", "treat"))
-resEx = topTags(difexpEx, n = nrow(DGE))
-outEx = resEx$table
-```
-
-Let's plot the outcomes:
-```{r}
-par(mfrow = c(1, 2))
-plotMeanVar(DGE, show.tagwise.vars = T, NBline = T)
-plotBCV(DGE)
-```
-
-To see the significantly differentially expressed features (p < 0.05) after FDR correction:
-```{r}
-outEx[outEx$FDR < 0.05, c(1, 2, 4)][1:5, ]
-```
-
-The data here is quite bad. Notice that the coefficient of variation is quite high at low counts. We can exclude these from the data and rerun the analysis.
-
-A similar result can be obtained by fitting a GLM model instead of exactTest:
-```{r}
-# Create a design matrix
-design = model.matrix( ~ contrast, contrast)
-
-# Estimate design matrix dispersions
-DGE2 = estimateGLMTrendedDisp(DGE, design)
-DGE2 = estimateGLMTagwiseDisp(DGE2, design)
-
-# Fit model
-fit = glmFit(DGE2, design)
-
-# Test contrast (coef) from design matrix
-difexpGLM = glmLRT(fit, coef = 2)
-
-# Extract outcomes
-res = topTags(difexpGLM, n = nrow(DGE))
-outGLM = res$table
-outGLM[outGLM$FDR < 0.05, ][1:5, ]
-```
-
 ## Senario 2
 We begin by modeling raw counts. Note that it is better to model raw counts rather than modeling normalized counts as we will know the distribution. We will use negative binomial distribution in here. Remeber our DESeqDataSet:
 ```{r}
@@ -678,13 +648,13 @@ table(res_2$padj < 0.1)
 ```
 
 Let's visualize results using MA plot:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 DESeq2::plotMA(res_2, ylim = c(-5, 5), colSig = "red")
 ```
 
 The grey values are those with an adjusted p-value of > 0.1 and red values are those with an adjusted p-value of < 0.1.
 
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 # Create the same MA plot for LFC of 1
 res.thr <- results(dds, lfcThreshold = 1)
 DESeq2::plotMA(res.thr, ylim = c(-5, 5), colSig = "red")
@@ -701,7 +671,7 @@ svseq <- svaseq(dat, mod, mod0, n.sv = 2)
 ```
 
 Plot surrogate variables:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 plot(svseq$sv[, 1], svseq$sv[, 2], col = dds$cell, pch = 16)
 ```
 
@@ -756,7 +726,7 @@ res_4 <- results(dds_4)
 ```
 
 Let's visualize results using MA plot:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 DESeq2::plotMA(res_4, ylim = c(-10, 10), colSig = "red")
 ```
 
@@ -766,7 +736,7 @@ which(res_4$padj == min(res_4$padj, na.rm = T), )
 ```
 
 Make a plot of the normalized counts for that gene:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 plotCounts(dds_4, which(res_4$padj == min(res_4$padj, na.rm = T),), intgroup = "type")
 ```
 
@@ -779,7 +749,7 @@ for (i in 1:9) {
 ```
 
 Create the same MA plot for LFC of 2:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 res_4.thr <- results(dds_4, lfcThreshold = 2)
 DESeq2::plotMA(res_4.thr, ylim = c(-10, 10), colSig = "red")
 ```
@@ -835,8 +805,51 @@ svseq_4 <- svaseq(dat_4, mod_4, mod0_4, n.sv = 2)
 ```
 
 Plot surrogate variables:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 plot(svseq_4$sv[, 1], svseq_4$sv[, 2], col = dds_4$cell.type, pch = 16)
+```
+
+## Senario 5
+Now let's perform a simple contrast between the two groups:
+```{r}
+difexpEx = exactTest(DGE, pair = c("ctrl", "treat"))
+resEx = topTags(difexpEx, n = nrow(DGE))
+outEx = resEx$table
+```
+
+Let's plot the outcomes:
+```{r}
+par(mfrow = c(1, 2))
+plotMeanVar(DGE, show.tagwise.vars = T, NBline = T)
+plotBCV(DGE)
+```
+
+To see the significantly differentially expressed features (p < 0.05) after FDR correction:
+```{r}
+outEx[outEx$FDR < 0.05, c(1, 2, 4)][1:5, ]
+```
+
+The data here is quite bad. Notice that the coefficient of variation is quite high at low counts. We can exclude these from the data and rerun the analysis.
+
+A similar result can be obtained by fitting a GLM model instead of exactTest:
+```{r}
+# Create a design matrix
+design = model.matrix( ~ contrast, contrast)
+
+# Estimate design matrix dispersions
+DGE2 = estimateGLMTrendedDisp(DGE, design)
+DGE2 = estimateGLMTagwiseDisp(DGE2, design)
+
+# Fit model
+fit = glmFit(DGE2, design)
+
+# Test contrast (coef) from design matrix
+difexpGLM = glmLRT(fit, coef = 2)
+
+# Extract outcomes
+res = topTags(difexpGLM, n = nrow(DGE))
+outGLM = res$table
+outGLM[outGLM$FDR < 0.05, ][1:5, ]
 ```
 
 ## Exon count (Differential exon usage; DEU)
@@ -916,7 +929,7 @@ dxd = estimateExonFoldChanges(dxd, fitExpToVar = "condition")
 ```
 
 The following code extracts a results table, makes an MA-plot, and draws the expression levels over the exons to highlight differential exon usage:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 dxr = DEXSeqResults(dxd)
 plotMA(dxr, cex = 0.8)
 plotDEXSeq(
@@ -930,7 +943,7 @@ plotDEXSeq(
 ```
 
 Again, drawing the expression levels, now showing the annotated transcripts below:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 plotDEXSeq(
   dxr,
   "FBgn0010909",
@@ -985,12 +998,15 @@ Let's make a plot for this gene:
 ```
 
 
-![7-5](Figures/7-5.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/7-5.jpeg")
+```
+
 How many transcripts does exonic part E009 appear in?
-**Answer: ** 1
+**Answer:** 1
 
 How many transcripts contain exonic part E008 but not exonic part E009?
-**Answer: ** 3
+**Answer:** 3
 
 ## Differential isoform expression
 In this example, we are not going to use Cufflinks, but instead, we will take a look at its output:
@@ -1014,26 +1030,26 @@ cuff <-
 ```
 
 Boxplots of expression (FPKM) at the gene and isoform level:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
 csBoxplot(genes(cuff))
 csBoxplot(genes(cuff), replicates = TRUE)
 csBoxplot(isoforms(cuff), replicates = TRUE)
 ```
 
 Scatterplot matrix of gene and isoform level expression:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '80%'}
 csScatterMatrix(genes(cuff))
 csScatterMatrix(isoforms(cuff))
 ```
 
 Sample dendrograms using Jensen-Shannon distances:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
 csDendro(genes(cuff), replicates = TRUE)
 csDendro(isoforms(cuff), replicates = TRUE)
 ```
 
 MA-plot comparing two conditions:
-```{r}
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
 MAplot(genes(cuff), "hESC", "Fibroblasts")
 MAplot(isoforms(cuff), "hESC", "Fibroblasts")
 ```
