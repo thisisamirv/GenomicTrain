@@ -4,12 +4,20 @@ output:
   pdf_document: 
     number_sections: yes
     toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
+
+\newpage
 
 Most expression studies try to identify the subset of genes that are differentially expressed between two or more conditions (differential gene expression (DGE) analysis).
 
@@ -32,6 +40,9 @@ print(slides)
 # Image of log intensities for the first slide
 library(affyPLM)
 PLM = fitPLM(slides)
+```
+
+```
 par(mfrow = c(2, 2))
 image(slides[, 1], main = "Log intensities")
 image(
@@ -57,11 +68,18 @@ image(
 )
 ```
 
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/6-1.jpeg")
+```
+
 This slide is of bad quality due to its spatial effect. An example of a good slide is the following:
 ```{r}
 # Image of log intensities for the fifth slide
 library(affyPLM)
 PLM = fitPLM(slides)
+```
+
+```
 par(mfrow = c(2, 2))
 image(slides[, 5], main = "log intensities")
 image(
@@ -85,6 +103,10 @@ image(
   xlab = XLabel,
   main = "Sign of residuals"
 )
+```
+
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/6-2.jpeg")
 ```
 
 We can also use relative log expression as another QC measure:
