@@ -94,41 +94,7 @@ DGE = DGEList(counts, group = contrast$contrast)
 ```
 
 # Quality control (QC)
-**S1:**
-<br>
-
-For RNA-seq data, **fastQC** is a popular non-R program for QC.
-```{bash}
-# S1
-fastqc --noextract Data/RNAseq.fastq.gz --quiet --outdir Output/
-```
-
-The output looks like this:
-
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/7-1.jpeg")
-```
-
-A similar job can be done in R with **ShortRead** package.
-```{r}
-# QC
-seqQC = qa("Data/RNAseq.fastq.gz")
-
-# Save report
-report(seqQC, dest = "Output/QCreport")
-```
-
-The "quality score per cycle" graph looks like this:
-
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
-knitr::include_graphics("Figures/7-2.jpeg")
-```
-
-```{bash echo=FALSE}
-rm -rf Output/QCreport
-```
-
-Notice how quality starts to drop after around 80 bp. In this case we might want to trim the last 10–20. bases.
+Check **FastQC** tutorials.
 
 # Preprocessing
 ## Filter reads
@@ -168,7 +134,7 @@ fastqc --noextract Output/trimmedRNA.fastq --quiet --outdir Output/
 
 The output looks like this:
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/7-3.jpeg")
+knitr::include_graphics("Figures/8-1.jpeg")
 ```
 
 ```{r}
@@ -182,7 +148,7 @@ report(seqQC, dest = "Output/QCreport_2")
 The "quality score per cycle" graph looks like this now:
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
-knitr::include_graphics("Figures/7-4.jpeg")
+knitr::include_graphics("Figures/8-2.jpeg")
 ```
 
 Things look better now.
@@ -999,7 +965,7 @@ Let's make a plot for this gene:
 
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/7-5.jpeg")
+knitr::include_graphics("Figures/8-3.jpeg")
 ```
 
 How many transcripts does exonic part E009 appear in?

@@ -23,7 +23,7 @@ rm(list = ls())
 Assay for Transposase-Accessible Chromatin with high-throughput sequencing (ATAC-Seq) is a technique for assessing genome-wide chromatin accessibility. The most common use is nucleosome mapping experiments, but it can be applied to mapping transcription factor binding sites, adapted to map DNA methylation sites, or combined with sequencing techniques.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
-knitr::include_graphics("Figures/16-1.jpeg")
+knitr::include_graphics("Figures/17-1.jpeg")
 ```
 
 # Scenario

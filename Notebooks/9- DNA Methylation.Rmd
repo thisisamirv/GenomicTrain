@@ -22,7 +22,7 @@ Techniques used to study epigenetics:
 
 **Methylation: ** CpG segments (from 5' to 3' end) are the hotspots for methyl groups to attach to, causing methylated DNA. When the DNA replicates, this methylation characteristic preserves. This methylation is different across different cells and is an epigenetic.
 
-![8-1](Figures/8-1.jpeg)
+![9-1](Figures/9-1.jpeg)
 
 Let's count the CpG segments in a part of human genome:
 ```{r}
@@ -1024,7 +1024,7 @@ prop.table(table(cut(
 # Accounting for cell composition
 Most of the data we study comes from bulk of tissue which is usually a combination of cell types. Usually, different cell types have very different methylation profiles. In the figure below, you can see the methylation profiles for different cell types in the blood of 6 individuals.
 
-![8-2](Figures/8-2.jpeg)
+![9-2](Figures/9-2.jpeg)
 
 As you can see, the difference between individuals for each cell type is negligible, but the difference between cell types is substantial. This problem could be attacked as an batch effect.
 
@@ -1228,11 +1228,11 @@ Let's check the paper details first:
 
 **Cohort Demographics:**
 
-![8-3](Figures/8-3.jpeg)
+![9-3](Figures/9-3.jpeg)
 
 **DNA methylation between cases and controls:**
 
-![8-4](Figures/8-4.jpeg)
+![9-4](Figures/9-4.jpeg)
 
 ## Import data
 Now let's import the data:

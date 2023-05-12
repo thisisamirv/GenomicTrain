@@ -25,7 +25,7 @@ Expression quantitative trait loci (eQTL) are genomic loci that explain variatio
 By using the expression of mRNA transcripts for genes as a phenotype of interest, one may quantify on a continuous scale the effect of regulatory variation by calculating the correlations between genetic differences and respective transcript abundance or probe intensity values.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
-knitr::include_graphics("Figures/12-1.jpeg")
+knitr::include_graphics("Figures/13-1.jpeg")
 ```
 
 Typically, eQTLs may be annotated as single nucleotide polymorphisms (SNPs), large structural variants (SVs), or copy number variants (CNVs).
@@ -67,7 +67,7 @@ As some coding inventions, for example, if p(3,2) = 23 and g(1,45) = 1.32 it mea
 Finally, v(3,2) = 2000 means that the genomic loci of the variant #2 for individual #3 is at 2000.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
-knitr::include_graphics("Figures/12-2.jpeg")
+knitr::include_graphics("Figures/13-2.jpeg")
 ```
 
 In the above figure, in addition to the raw data, we also added in red a regression line:
@@ -93,19 +93,19 @@ In analogy to the connection between the linear model and the Pearson correlatio
 In case of a QTL, usually all available loci are tested against all available phenotypes and the level of association is then typically visualized in a Manhattan plot, where the x-axis represents the loci on the genome and the y-axis represents the level of association:
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
-knitr::include_graphics("Figures/12-3.jpeg")
+knitr::include_graphics("Figures/13-3.jpeg")
 ```
 
 The typical visualization for cis-eQTL is also a Manhattan-like plot:
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
-knitr::include_graphics("Figures/12-4.jpeg")
+knitr::include_graphics("Figures/13-4.jpeg")
 ```
 
 The most common trans-eQTL visualization is done using a circular representation:
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
-knitr::include_graphics("Figures/12-5.jpeg")
+knitr::include_graphics("Figures/13-5.jpeg")
 ```
 
 ## Multiple Testing
