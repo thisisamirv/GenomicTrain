@@ -21,3 +21,7 @@ Most of the codes and data in this repo come from the following sources:
 8- Rausch, T., Hsi-Yang Fritz, M., Korbel, J. O., & Benes, V. (2019). Alfred: interactive multi-sample BAM alignment statistics, feature counting and feature annotation for long-and short-read sequencing. Bioinformatics, 35(14), 2489-2491.
 
 9- Erarslan‐Uysal, B., Kunz, J. B., Rausch, T., Richter‐Pechańska, P., van Belzen, I. A., Frismantas, V., ... & Kulozik, A. E. (2020). Chromatin accessibility landscape of pediatric T‐lymphoblastic leukemia and human T‐cell precursors. EMBO molecular medicine, 12(9), e12104.
+
+10- Heumos, L., Schaar, A.C., Lance, C. et al. Best practices for single-cell analysis across modalities. Nat Rev Genet (2023).
+
+11- Devisetty, Upendra Kumar. Deep Learning for Genomics: Data-driven Approaches for Genomics Applications in Life Sciences and Biotechnology. United Kingdom, Packt Publishing, 2022.
