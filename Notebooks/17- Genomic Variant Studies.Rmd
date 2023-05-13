@@ -1,0 +1,28 @@
+---
+title: "Genomic Variant Studies"
+output: 
+  pdf_document: 
+    number_sections: yes
+    toc: yes
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+rm(list=ls())
+```
+
+# Copy number variants (CNV)
+**Log R Ratio (LRR):** The LRR is the normalized measure of total signal intensity and provides information relative to copy number or the number of alleles present in a biological sample at one SNP.
+<br>
+**B Allele Frequency (BAF):** BAF is derived from the ratio of between intensities of the allele probes, measuring the allele proportion or allele composition of the sample. In normal samples, the expected values are:
+
+* 0 and 1 for homozygous genotypes (AA, BB)
+* 0.5 for heterozygous genotypes (AB)
+<br>
+
+### CNV calling
+Segmentation of LRR values along the chromosome together with BAF information are used to identify the regions with probable copy number alterations.
+```{r}
+# Import packages
+library(gada)
+```

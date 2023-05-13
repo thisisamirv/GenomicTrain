@@ -1,17 +1,25 @@
 ---
 title: "Biological vs. Technical Variability"
-output:
+output: 
   pdf_document: 
     number_sections: yes
     toc: yes
-  html_document:
-    df_print: paged
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
-```{r setup, include=FALSE} 
-knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+rm(list = ls())
 ```
 
+\newpage
+
+# Variability in data
 Some variability in the data is indeed biological variability, while some are due to technical stuff. In this session we want to check for the difference between the two.
 
 The sample data includes RNA from 12 randomly selected mice from two strains, and two pools with the RNA from all twelve mice from each of the two strains.
