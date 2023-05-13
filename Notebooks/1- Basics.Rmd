@@ -489,14 +489,9 @@ PLINK format includes three files:
 * .bim: Contains SNPs annotations
 * .fam: Contains the subject’s information
 
-```{bash, echo=FALSE}
-cat Data/obesity1.bed Data/obesity2.bed Data/obesity3.bed Data/obesity4.bed \
-> Output/obesity.bed
-```
-
-```{r, eval=FALSE}
+```{r}
 library(snpStats)
-snps <- read.plink(bed = "Output/obesity.bed",
+snps <- read.plink(bed = "Data/obesity.bed",
   bim = "Data/obesity.bim",
   fam = "Data/obesity.fam")
 geno <- snps$genotypes
@@ -667,13 +662,13 @@ We want to create a database. There are two ways:
 For our database we need to create a schema (a schema is simply a text file that describes the database structure and is used to create the initial empty DB). A simple schema will consist of two tables, one for each of the files and one column for each source of information.
 
 ```{bash, eval=FALSE}
- cat Data/snpDB.sql
+cat Data/snpDB.sql
 ```
 
 We are ready to create the database, named "SNPsmall":
 
 ```{bash, , eval=FALSE}
- sqlite3 Data/SNPsmall < Data/snpDB.sql
+sqlite3 Data/SNPsmall < Data/snpDB.sql
 ```
 
 ### Using R
@@ -928,8 +923,4 @@ library(png)
 library(grid)
 brpng = keggGet("hsa05212", "image")
 grid.raster(brpng)
-```
-
-```{bash, echo=FALSE}
-rm Output/obesity.bed
 ```

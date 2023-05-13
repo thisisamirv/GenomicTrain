@@ -58,10 +58,6 @@ first_snp_s1 <- geno_s1[geno_s1$snp == annotation_s1$name[1],]
 first_snp_s1[1:3,]
 ```
 
-```{bash, echo=FALSE}
-tar -zxvf Data/obesity.bed.tar.gz -C Output/
-```
-
 ```{r}
 # Scenario 2 (S2) - Import data
 # Import packages
@@ -69,7 +65,7 @@ library(snpStats)
 
 # Import genotype, annotation, and family data
 ob.plink_s2 <-
-  read.plink(bed = "Output/obesity.bed",
+  read.plink(bed = "Data/obesity.bed",
              bim = "Data/obesity.bim",
              fam = "Data/obesity.fam")
 
@@ -630,7 +626,7 @@ At genome-wide level:
 # Identifying individuals
 info.indv_s2 <- row.summary(geno_s2)
 snpgdsBED2GDS(
-  "Output/obesity.bed",
+  "Data/obesity.bed",
   "Data/obesity.fam",
   "Data/obesity.bim",
   out = "Output/obGDS",
@@ -1308,8 +1304,4 @@ mod.adj <-
   )
 lrt.adj <- mod.adj.ref$deviance - mod.adj$deviance
 pchisq(lrt.adj, mod.adj$lrt$df, lower = FALSE)
-```
-
-```{bash, echo=FALSE}
-rm Output/obesity.bed
 ```
