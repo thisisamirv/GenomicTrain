@@ -4,12 +4,20 @@ output:
   pdf_document: 
     number_sections: yes
     toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
+
+\newpage
 
 # Introduction
 **Epigenetics: ** Epigenetics is the study of stable phenotypic changes that do not involve alterations in the DNA sequence.  Epigenetics most often involves changes that affect gene activity and expression.
@@ -22,7 +30,9 @@ Techniques used to study epigenetics:
 
 **Methylation: ** CpG segments (from 5' to 3' end) are the hotspots for methyl groups to attach to, causing methylated DNA. When the DNA replicates, this methylation characteristic preserves. This methylation is different across different cells and is an epigenetic.
 
-![9-1](Figures/9-1.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/10-1.jpeg")
+```
 
 Let's count the CpG segments in a part of human genome:
 ```{r}
@@ -47,7 +57,7 @@ countPattern("CG", s)
 ```{r}
 # Load the data in AnnotationHub package
 library(AnnotationHub)
-ah <- AnnotationHub(localHub = TRUE)
+ah <- AnnotationHub(localHub = FALSE)
 
 # Subset to just the databases related to the hg19 genome
 ah <- subset(ah, ah$genome == "hg19")
@@ -194,7 +204,7 @@ Now let's determine which of the differentially methylated CpGs are in CpG islan
 ```{r}
 # Redefine CpG islands as cgi
 library(AnnotationHub)
-ah <- AnnotationHub(localHub = TRUE)
+ah <- AnnotationHub(localHub = FALSE)
 cgi <- ah[["AH5086"]]
 index = which(qvals <= 0.05)
 table(gr[index] %over% cgi)[2] / length(gr[index])
@@ -583,7 +593,7 @@ library(rafalib)
 library(AnnotationHub)
 
 # Load CpG islands
-cgi = AnnotationHub(localHub = TRUE)[["AH5086"]]
+cgi = AnnotationHub(localHub = FALSE)[["AH5086"]]
 
 # Restrict results to those with a FWER < 0.05
 tab = res$tab[res$tab$fwer <= 0.05, ]
@@ -1000,7 +1010,7 @@ length(overlaps) / length(index)
 Now let's download the table of CpG islands using AnnotationHub:
 ```{r}
 library(AnnotationHub)
-cgi <- AnnotationHub(localHub = TRUE)[["AH5086"]]
+cgi <- AnnotationHub(localHub = FALSE)[["AH5086"]]
 ```
 
 Create a GRanges object from the list of DMRs we computed previously:
@@ -1024,7 +1034,9 @@ prop.table(table(cut(
 # Accounting for cell composition
 Most of the data we study comes from bulk of tissue which is usually a combination of cell types. Usually, different cell types have very different methylation profiles. In the figure below, you can see the methylation profiles for different cell types in the blood of 6 individuals.
 
-![9-2](Figures/9-2.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/10-2.jpeg")
+```
 
 As you can see, the difference between individuals for each cell type is negligible, but the difference between cell types is substantial. This problem could be attacked as an batch effect.
 
@@ -1228,11 +1240,15 @@ Let's check the paper details first:
 
 **Cohort Demographics:**
 
-![9-3](Figures/9-3.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/10-3.jpeg")
+```
 
 **DNA methylation between cases and controls:**
 
-![9-4](Figures/9-4.jpeg)
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/10-4.jpeg")
+```
 
 ## Import data
 Now let's import the data:

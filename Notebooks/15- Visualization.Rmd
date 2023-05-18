@@ -1,11 +1,15 @@
 ---
-title: "Visualization"
-output:
+title: "Visulization"
+output: 
   pdf_document: 
     number_sections: yes
     toc: yes
-  html_document:
-    df_print: paged
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
@@ -13,6 +17,9 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
 
+\newpage
+
+# Introduction
 As an example, let's visualize two neighboring genes of interest in asthma genomics.
 ```{r}
 # Import packages

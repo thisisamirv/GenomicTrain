@@ -4,12 +4,20 @@ output:
   pdf_document: 
     number_sections: yes
     toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
-```{r setup, include=FALSE} 
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-rm(list=ls())
+rm(list = ls())
 ```
+
+\newpage
 
 # SNP Best Linear Unbiased Prediction
 We use snpBLUP to simultaneously estimate all SNP effects, despite what happens in single SNP regression analyses.
@@ -105,22 +113,27 @@ p = rowMeans(gwas) / 2
 # Lambda
 d = 2 * sum(p * (1 - p))
 lambda = (1 - h2) / (h2 / d)
+```
+
+```{r, eval=FALSE}
 
 # snpBLUP with fitting the mean
-## y = pheno
-## X = t(gwas - (p * 2))
-## XtX = t(X) %*% X
-## diag(XtX) = diag(XtX) + lambda
-## ones = rep(1, length(y))
-## oto = t(ones) %*% ones
-## otX = t(ones) %*% X
-## Xto = t(X) %*% ones
-## lhs = rbind(cbind(oto, otX), cbind(Xto, XtX))
-## oty = t(ones) %*% y
-## Xty = t(X) %*% y
-## rhs = rbind(oty, Xty)
-## effectBLUP = solve(lhs) %*% rhs
+y = pheno
+X = t(gwas - (p * 2))
+XtX = t(X) %*% X
+diag(XtX) = diag(XtX) + lambda
+ones = rep(1, length(y))
+oto = t(ones) %*% ones
+otX = t(ones) %*% X
+Xto = t(X) %*% ones
+lhs = rbind(cbind(oto, otX), cbind(Xto, XtX))
+oty = t(ones) %*% y
+Xty = t(X) %*% y
+rhs = rbind(oty, Xty)
+effectBLUP = solve(lhs) %*% rhs
+```
 
+```{r}
 # snpBLUP without fitting the mean
 y = pheno
 X = t(gwas - (p * 2))
@@ -277,9 +290,6 @@ effect = data.frame(single = effSingle,
                      snpblup = effBlup,
                      rrblup = effPack)
 ```
-
-
-<br>
 
 # Genomic Prediction
 The objective of genomic prediction is to make use of genotypic data to predict phenotypic outcomes. This can be achieved using snpBLUP or gBLUP.

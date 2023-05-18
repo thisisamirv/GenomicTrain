@@ -2,14 +2,22 @@
 title: "Multi-Omic Data Integration"
 output: 
   pdf_document: 
-    toc: yes
     number_sections: yes
+    toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
+
+\newpage
 
 # Integrative analysis examples
 ### TF binding and expression co-regulation in yeast

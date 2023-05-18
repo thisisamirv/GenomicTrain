@@ -1,12 +1,15 @@
 ---
-title: "ChIP-seq"
+title: "ChIP-Seq"
 output: 
   pdf_document: 
     number_sections: yes
     toc: yes
 header-includes: 
-  - \usepackage{graphicx}
+  - \usepackage{graphics}
   - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
@@ -14,13 +17,15 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
 
+\newpage
+
 # Introduction
 **Transcription regulation:** Transcription factors (TF) bind to chromatin in sequence-specific manner (TF binding motif) to regulate gene expression. Genes co-expressed in different conditions are likely under the control of the same TB.
 
 **ChIP-Seq:** A method used to analyze protein interactions with DNA. ChIP-seq combines chromatin immunoprecipitation (ChIP) with massively parallel DNA sequencing to identify genome-wide binding site (BS) of TFs. It is often conducted in millions of cells, where protein-DNA interactions are fixed, then chromatin is sheared into small pieces. Then a factor-specific antibody is used to pull down the factor as well as the DNA attached to it.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-1", out.width = '100%'}
-knitr::include_graphics("Figures/10-1.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/11-1.jpeg")
 ```
 
 # ChIP-seq technique
@@ -73,15 +78,15 @@ For aligning sequence reads to the genome, one can use the following algorithms:
 
 **MACS:** TF BSs are enriched in the ChIP protocol, and in sequencing the plus-strand reads will be mapped to the left of the precise binding location, while minus-strand reads will be mapped to the right of binding. ChIP fragments are often 100-300bp long, and sequencing only sequences the ends of the fragments. If plus-strand reads (to the left of binding) and minus-strand reads (to the right of the binding) are separated by 120bp, the precise binding site should be right in the middle of the two. So shifting reads by 60bp in 3' direction will find the precise binding location. Model-based analysis for ChIP-seq (MACS), is an algorithm that models the shift size of ChIP-Seq tags, and uses it to improve the spatial resolution of predicted BSs.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-2", out.width = '75%'}
-knitr::include_graphics("Figures/10-2.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
+knitr::include_graphics("Figures/11-2.jpeg")
 ```
 
 # Target genes
 Wherever a TF binds to a promoter of a gene, we assume that gene is being regulated by that TF. There are different regulatory rules:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-3", out.width = '100%'}
-knitr::include_graphics("Figures/10-3.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/11-3.jpeg")
 ```
 
 However, only 3% of TFs in the human genome bind to the promoter of a gene. This makes the process of finding the target gene challenging. To tackle this problem, we look at the transcription start site (TSS) of a gene and evaluate the BSs within 100kb from it, weighting them by their distance, also checking if these genes show differential expression. Note that TFs could cause activation as well as repression of a gene, or both. Also note, TF binding and target gene is a many-by-many relationship: one BS can regulate the expression of multiple genes (stochastic so might be different in different cells) and one gene is regulated by multiple nearby enhancers.
@@ -100,34 +105,34 @@ Cistrome DB in an online platform (available at http://cistrome.org/db) that can
 Cistrome functions can be divided into three categories: data preprocessing, gene expression and integrative analysis. A general workflow using Cistrome is to upload datasets, preprocess them using peak calling tools to generate peak locations in BED format and signal profiles in WIGGLE format, upload gene expression data to produce specific gene lists, and then use various integrative analysis tools to generate figures and reports.
 An overview of the pipeline is presented bellow:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-4; The left panel shows available tools, the middle panel shows messages, tool options, or result details, and the right panel shows the datasets organized in the user's history, including datasets that have been or are being processed (in green and yellow, respectively), or waiting in the queue (in gray). CEAS,; DC, Data Collection module; GEO, Gene Expression Omnibus; NPS, Nucleosome Positioning from Sequencing.", out.width = '70%'}
-knitr::include_graphics("Figures/10-4.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="The left panel shows available tools, the middle panel shows messages, tool options, or result details, and the right panel shows the datasets organized in the user's history, including datasets that have been or are being processed (in green and yellow, respectively), or waiting in the queue (in gray). CEAS,; DC, Data Collection module; GEO, Gene Expression Omnibus; NPS, Nucleosome Positioning from Sequencing.", out.width = '70%'}
+knitr::include_graphics("Figures/11-4.jpeg")
 ```
 
 Correlation and association tools consists of the following:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-5", out.width = '70%'}
-knitr::include_graphics("Figures/10-5.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '70%'}
+knitr::include_graphics("Figures/11-5.jpeg")
 ```
 
 (a) Correlation plots using different histone marks in C. elegans early embryos. Cistrome correlation tools can generate either a heatmap with hierarchical clustering according to pair-wise correlation coefficients or a grid of scatterplots. (b) Venn diagram showing the overlap of H3K4me3 peaks (in blue) with TSS for all the genes (in red) in the C. elegans genome. (c) Meta-gene plot generated by CEAS showing the H3K4me3 signals enriched at gene promoter regions; the top expressed genes (red) have higher H3K4me3 signals than the bottom expressed genes (purple). (d) Conservation plot showing that the human androgen receptor (AR) binding sites from ChIP-chip are more conserved than their flanking regions in placental mammals.
 
 1- Upload BAM files from "Data/Cisterome". Make sure the correct genome (mm9 in this case) is selected.
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-6", out.width = '60%'}
-knitr::include_graphics("Figures/10-6.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
+knitr::include_graphics("Figures/11-6.jpeg")
 ```
 
 2- Call peaks from alignment results:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-7", out.width = '60%'}
-knitr::include_graphics("Figures/10-7.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
+knitr::include_graphics("Figures/11-7.jpeg")
 ```
 
 3- Check peak calling results:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-8", out.width = '100%'}
-knitr::include_graphics("Figures/10-8.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
+knitr::include_graphics("Figures/11-8.jpeg")
 ```
 
 # BETA software suite
@@ -164,24 +169,24 @@ Input files include:
 Output files include:
 * Function prediction:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-9; In this example, the TF is both activating and repressing.", out.width = '50%'}
-knitr::include_graphics("Figures/10-9.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="In this example, the TF is both activating and repressing.", out.width = '50%'}
+knitr::include_graphics("Figures/11-9.jpeg")
 ```
 
 * Target genes:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-10", out.width = '75%'}
-knitr::include_graphics("Figures/10-10.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
+knitr::include_graphics("Figures/11-10.jpeg")
 ```
 
 * Associated peaks:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-11; This data tells us what specific peaks contributed to the finding of target genes.", out.width = '75%'}
-knitr::include_graphics("Figures/10-11.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="This data tells us what specific peaks contributed to the finding of target genes.", out.width = '75%'}
+knitr::include_graphics("Figures/11-11.jpeg")
 ```
 
 * motifs enriched in ChIP-seq peaks:
 
-```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="9-12", out.width = '75%'}
-knitr::include_graphics("Figures/10-12.jpeg")
+```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '75%'}
+knitr::include_graphics("Figures/11-12.jpeg")
 ```

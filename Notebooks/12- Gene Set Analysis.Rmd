@@ -1,17 +1,23 @@
 ---
 title: "Gene Set Analysis"
-output:
+output: 
   pdf_document: 
     number_sections: yes
     toc: yes
-  html_document:
-    df_print: paged
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 rm(list = ls())
 ```
+
+\newpage
 
 # Load and prepare data and gene set
 
@@ -86,9 +92,6 @@ e = ExpressionSet(
 gsids <- mapGMT2Affy(e, gsets)
 ```
 
-<br>
-<br>
-
 # Approaches based on association tests
 
 ```{r}
@@ -101,9 +104,6 @@ tab <-
 tab
 chisq.test(tab)$p.val
 ```
-
-<br>
-<br>
 
 # Gene set summary statistics
 Wilcoxon Mann-Whitney test: The basic idea is to test if the difference between cases and controls is bigger in a given gene set compared to the rest of the genes.
@@ -173,9 +173,6 @@ legend(
 
 Note that under the null hypothesis that the genes in the gene set are not differentially expressed and  t-statistics are independent of each other, the distribution should be approximately normal.
 
-<br>
-<br>
-
 # Hypothesis testing for gene sets
 The above test assumed that t-statistics are independent and identically distributed. However, we can see the pairwise correlations in each gene set as follows:
 
@@ -238,9 +235,6 @@ arrows(avgt_stats[thirdhighest] + 3,
 ```
 
 Note in particular, the third highest value (arrow) is now quite close to 0 and is no longer significant.
-
-<br>
-<br>
 
 # Permutations
 Permutations are non-parametric tests.

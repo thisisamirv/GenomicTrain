@@ -1,5 +1,5 @@
 ---
-title: "RNA-seq"
+title: "RNA-Seq"
 output: 
   pdf_document: 
     number_sections: yes
@@ -134,7 +134,7 @@ fastqc --noextract Output/trimmedRNA.fastq --quiet --outdir Output/
 
 The output looks like this:
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/8-1.jpeg")
+knitr::include_graphics("Figures/9-1.jpeg")
 ```
 
 ```{r}
@@ -148,7 +148,7 @@ report(seqQC, dest = "Output/QCreport_2")
 The "quality score per cycle" graph looks like this now:
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '60%'}
-knitr::include_graphics("Figures/8-2.jpeg")
+knitr::include_graphics("Figures/9-2.jpeg")
 ```
 
 Things look better now.
@@ -165,15 +165,15 @@ rm Output/trimmedRNA_fastqc.html
 <br>
 
 Now we have to align the data against a reference genome. **bowtie2** is a good software for this. For this purpose, first download the reference genome (index) from [bowtie2 website](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) or [Illumina website](http://support.illumina.com/sequencing/sequencing_software/igenome.html) and then run the following codes:
-```{bash}
-# bowtie2-align-s -p 80 -x "reference genome" Output/trimmedRNA.fastq -S alignedRNA
+```{bash, eval=FALSE}
+bowtie2-align-s -p 80 -x "reference genome" Output/trimmedRNA.fastq -S alignedRNA
 ```
 
 The aligned data is in SAM format. The last step is to convert the SAM file into BAM, sort and index it. For this we will use **samtools**:
-```{bash}
-# samtools import "reference genome" Output/alignedRNA.sam Output/alignedRNA.bam
-# samtools sort Output/alignedRNA.bam Output/sortedAlignedRNA.bam
-# samtools index Output/sortedAlignedRNA.bam
+```{bash, eval=FALSE}
+samtools import "reference genome" Output/alignedRNA.sam Output/alignedRNA.bam
+samtools sort Output/alignedRNA.bam Output/sortedAlignedRNA.bam
+samtools index Output/sortedAlignedRNA.bam
 ```
 
 The output should be **sortedAlignedRNA.bam** and the index has the same name with extension **.bai**. Finally, to concatenate data from a sample that is spread across two or more SAM/BAM files, use the **merge** command from *samtools*.
@@ -186,8 +186,9 @@ The output should be **sortedAlignedRNA.bam** and the index has the same name wi
 library(GenomicFeatures)
 library(GenomicAlignments)
 library(biomaRt)
-txdb = makeTxDbFromBiomart(biomart = "ENSEMBL_MART_ENSEMBL",
-                           dataset = 'btaurus_gene_ensembl')
+library(TxDb.Btaurus.UCSC.bosTau9.refGene)
+
+txdb = TxDb.Btaurus.UCSC.bosTau9.refGene
 txGene = transcriptsBy(txdb, 'gene')
 
 # Read in the preprocessed BAM file
@@ -578,7 +579,7 @@ There are some approaches for RNA-seq analysis:
 
 Now let's perform gene expression quantification.
 
-## Senario 2
+## Scenario 2
 We begin by modeling raw counts. Note that it is better to model raw counts rather than modeling normalized counts as we will know the distribution. We will use negative binomial distribution in here. Remeber our DESeqDataSet:
 ```{r}
 # Design of DESeqDataSet
@@ -666,7 +667,7 @@ DESeq2::plotMA(res_2, ylim = c(-5, 5), colSig = "red", main = "Before SVA")
 DESeq2::plotMA(res.sva_2, ylim = c(-5, 5), colSig = "red", main = "After SVA")
 ```
 
-## Senario 4
+## Scenario 4
 In here, we will perform a gene-level DE analysis of brain tissue samples against all other samples. Now we make a new factor column in the colData of dds, which we set to "brain" for cerebellum and mixed brain samples, and "other" for all other samples. We will set "other" as the reference level (the denominator for the fold changes).
 ```{r}
 dds_4$type <-
@@ -775,7 +776,7 @@ Plot surrogate variables:
 plot(svseq_4$sv[, 1], svseq_4$sv[, 2], col = dds_4$cell.type, pch = 16)
 ```
 
-## Senario 5
+## Scenario 5
 Now let's perform a simple contrast between the two groups:
 ```{r}
 difexpEx = exactTest(DGE, pair = c("ctrl", "treat"))
@@ -965,7 +966,7 @@ Let's make a plot for this gene:
 
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/8-3.jpeg")
+knitr::include_graphics("Figures/9-3.jpeg")
 ```
 
 How many transcripts does exonic part E009 appear in?
@@ -1083,9 +1084,4 @@ Subsetting to only the genes that have more than one isoform, how often is the h
 ips.max = sapply(split(ips$fpkm, isoforms.per.gene$gene_id), which.max)
 hesc.max = sapply(split(hesc$fpkm, isoforms.per.gene$gene_id), which.max)
 mean((ips.max == hesc.max)[gene.tab > 1]) 
-```
-
-```{bash  echo=FALSE}
-# Delete extra files
-rm Output/RNAseq_fastqc.html Output/RNAseq_fastqc.zip
 ```

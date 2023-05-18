@@ -4,12 +4,20 @@ output:
   pdf_document: 
     number_sections: yes
     toc: yes
+header-includes: 
+  - \usepackage{graphics}
+  - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-rm(list=ls())
+rm(list = ls())
 ```
+
+\newpage
 
 # Copy number variants (CNV)
 **Log R Ratio (LRR):** The LRR is the normalized measure of total signal intensity and provides information relative to copy number or the number of alleles present in a biological sample at one SNP.

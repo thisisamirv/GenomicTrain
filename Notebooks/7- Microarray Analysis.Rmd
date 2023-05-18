@@ -42,7 +42,7 @@ library(affyPLM)
 PLM = fitPLM(slides)
 ```
 
-```
+```{r, eval=FALSE}
 par(mfrow = c(2, 2))
 image(slides[, 1], main = "Log intensities")
 image(
@@ -69,7 +69,7 @@ image(
 ```
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/6-1.jpeg")
+knitr::include_graphics("Figures/7-1.jpeg")
 ```
 
 This slide is of bad quality due to its spatial effect. An example of a good slide is the following:
@@ -79,7 +79,7 @@ library(affyPLM)
 PLM = fitPLM(slides)
 ```
 
-```
+```{r, eval=FALSE}
 par(mfrow = c(2, 2))
 image(slides[, 5], main = "log intensities")
 image(
@@ -106,7 +106,7 @@ image(
 ```
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', out.width = '100%'}
-knitr::include_graphics("Figures/6-2.jpeg")
+knitr::include_graphics("Figures/7-2.jpeg")
 ```
 
 We can also use relative log expression as another QC measure:

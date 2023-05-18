@@ -7,6 +7,9 @@ output:
 header-includes: 
   - \usepackage{graphics}
   - \usepackage{float}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
 
 ```{r setup, include=FALSE} 
@@ -33,19 +36,19 @@ There are some different types of QTL:
 **Backcross** is the simplest form of crossing where F1 individuals are crossed to one of the two parental strains. In a backcross to the A strain, one may detect a QTL only if the A allele is not dominant.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Backcrossing", out.width = '90%'}
-knitr::include_graphics("Figures/12-1.jpeg")
+knitr::include_graphics("Figures/13-1.jpeg")
 ```
 
 **Intercross** is the most widely used form of crossing. The intercross allows the detection of QTL for which one allele is dominant. Moreover, the intercross allows one to estimate the degree of dominance at a QTL.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Intercrossing", out.width = '90%'}
-knitr::include_graphics("Figures/12-2.jpeg")
+knitr::include_graphics("Figures/13-2.jpeg")
 ```
 
 **Recombinant inbred lines (RIL)** is another form beginning with an intercross, and then mating pairs of F2 siblings, followed by a parallel series of repeated sibling mating to construct a new panel of inbred lines whose genomes are a mosaic of the two initial lines. In RIL we can achieve better mapping resolution, but it is expensive.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Recombinant inbred lines", out.width = '50%'}
-knitr::include_graphics("Figures/12-3.jpeg")
+knitr::include_graphics("Figures/13-3.jpeg")
 ```
 
 # QTL mapping
@@ -871,11 +874,11 @@ Thus, we might report p < 0.004.
 The X chromosome exhibits special behavior and must be treated differently from the autosomes in QTL mapping.
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="The behavior of the X chromosome in a backcross. Circles and squares correspond to females and males, respectively. The small bar is the Y chromosome.", out.width = '40%'}
-knitr::include_graphics("Figures/12-4.jpeg")
+knitr::include_graphics("Figures/13-4.jpeg")
 ```
 
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="The behavior of the X chromosome in a intercross Circles and squares correspond to females and males, respectively. The small bar is the Y chromosome.", out.width = '40%'}
-knitr::include_graphics("Figures/12-5.jpeg")
+knitr::include_graphics("Figures/13-5.jpeg")
 ```
 
 If not taken into account, such systematic differences can lead to large LOD scores on the X chromosome even in the absence of X chromosome linkage. Finally, to account for the fact that the number of degrees of freedom for the linkage test on the X chromosome may be different from that on the autosomes, an X-chromosome-specific significance threshold is required.
@@ -975,7 +978,7 @@ Once one has obtained evidence for a QTL, one may seek an interval estimate of t
 
 The 1.5-LOD support interval is the interval in which the LOD score is within 1.5 units of its maximum. We prefer to use 1.5-LOD support intervals for a backcross, and 1.8-LOD support intervals for an intercross:
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Illustration of the 1.5-LOD support interval.", out.width = '70%'}
-knitr::include_graphics("Figures/12-6.jpeg")
+knitr::include_graphics("Figures/13-6.jpeg")
 ```
 
 ```{r}
@@ -985,7 +988,7 @@ lodint(results = out.em, chr = 4, qtl.index = 1.5)
 
 An approximate Bayes credible interval is obtained by viewing 10 ^ LOD as a real likelihood function for QTL location:
 ```{r, echo=FALSE, fig.align='center', fig.pos='H', fig.show='hold', fig.cap="Illustration of the approximate 95% Bayes credible interval.", out.width = '70%'}
-knitr::include_graphics("Figures/12-7.jpeg")
+knitr::include_graphics("Figures/13-7.jpeg")
 ```
 
 ```{r}
